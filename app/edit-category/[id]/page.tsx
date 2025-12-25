@@ -47,17 +47,23 @@ export default function EditCategoryPage() {
     e.preventDefault();
     setLoading(true);
 
-    const updatePromise = supabase
-      .from("categories")
-      .update({
-        name: formData.name,
-        icon_name: formData.icon_name,
-        color_class: formData.color_class,
-        // DİKKAT: 'key' alanını güncellemiyoruz, veri bütünlüğü bozulmasın.
-      })
-      .eq("id", id);
+    // --- ESKİ KODU SİLDİK, SADECE BU YENİ YAPI KALMALI ---
+    const updateOperation = async () => {
+      const { error } = await supabase
+        .from("categories")
+        .update({
+          name: formData.name,
+          icon_name: formData.icon_name,
+          color_class: formData.color_class,
+        })
+        .eq("id", id);
 
-    await toast.promise(updatePromise, {
+      // Supabase hata döndürürse, toast'ın "error" durumuna geçmesi için hatayı fırlatıyoruz
+      if (error) throw error;
+    };
+    // -----------------------------------------------------
+
+    await toast.promise(updateOperation(), {
       pending: "Güncelleniyor...",
       success: "Kategori güncellendi! 🎉",
       error: "Hata oluştu.",
