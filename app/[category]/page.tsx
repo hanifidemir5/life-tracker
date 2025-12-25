@@ -13,16 +13,18 @@ import {
   ArrowLeft,
   Loader2,
   User,
+  Save,
 } from "lucide-react";
+// 1. İMPORT ET
+import { toast } from "react-toastify";
 
-// Tip tanımına 'owner' ekledik (İsteğe bağlı olabilir -> ?)
 type Item = {
   id: number;
   title: string;
   description: string;
   category: string;
   status: boolean;
-  owner?: string; // Yeni alan
+  owner?: string;
 };
 
 export default function CategoryPage() {
@@ -32,8 +34,12 @@ export default function CategoryPage() {
 
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingUpdates, setPendingUpdates] = useState<Record<number, boolean>>(
+    {}
+  );
+  // isSaving state'ine artık ihtiyacımız yok, toast.promise halledecek ama buton disable için tutabiliriz.
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ... (categoryLabels aynı kalıyor) ...
   const categoryLabels: Record<string, string> = {
     book: "📚 Kitap Listesi",
     place: "📍 Gezilen Yerler",
@@ -51,7 +57,8 @@ export default function CategoryPage() {
         .order("id", { ascending: false });
 
       if (error) {
-        console.error("Veri çekme hatası:", error);
+        console.error(error);
+        toast.error("Veriler yüklenirken hata oluştu!"); // Hata toast'ı
       } else {
         setItems(data || []);
       }
@@ -61,16 +68,42 @@ export default function CategoryPage() {
     fetchItems();
   }, [currentCategory]);
 
-  const toggleStatus = async (id: number, currentStatus: boolean) => {
+  const toggleStatus = (id: number, currentStatus: boolean) => {
     setItems(
       items.map((item) =>
         item.id === id ? { ...item, status: !currentStatus } : item
       )
     );
-    await supabase
-      .from("items")
-      .update({ status: !currentStatus })
-      .eq("id", id);
+
+    setPendingUpdates((prev) => ({
+      ...prev,
+      [id]: !currentStatus,
+    }));
+  };
+
+  // 2. YENİ KAYDETME FONKSİYONU
+  const saveChanges = async () => {
+    setIsSaving(true);
+
+    const updatesToProcess = Object.entries(pendingUpdates);
+
+    // İşlemi bir Promise olarak tanımlıyoruz
+    const updatePromise = Promise.all(
+      updatesToProcess.map(([id, newStatus]) =>
+        supabase.from("items").update({ status: newStatus }).eq("id", id)
+      )
+    );
+
+    // 3. TOAST.PROMISE İLE BÜYÜYÜ YAPIYORUZ
+    await toast.promise(updatePromise, {
+      pending: "Değişiklikler buluta kaydediliyor... ☁️",
+      success: "Tüm veriler başarıyla güncellendi! 🎉",
+      error: "Kaydederken bir sorun oluştu 🤯",
+    });
+
+    // İşlem bitince temizlik
+    setPendingUpdates({});
+    setIsSaving(false);
   };
 
   const getIcon = (category: string) => {
@@ -89,12 +122,20 @@ export default function CategoryPage() {
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (Object.keys(pendingUpdates).length > 0) {
+      // Çıkış uyarısı için basit bir toast info kullanabiliriz veya confirm kalabilir.
+      // Confirm daha güvenlidir çünkü toast navigasyonu durdurmaz.
+      const confirmLeave = confirm(
+        "Kaydedilmemiş değişikliklerin var! Çıkarsan kaybolacak."
+      );
+      if (!confirmLeave) return;
+    }
     const selected = e.target.value;
     selected === "home" ? router.push("/") : router.push(`/${selected}`);
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
+    <main className="min-h-screen bg-gray-50 p-8 pb-32">
       <div className="max-w-4xl mx-auto">
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -124,6 +165,7 @@ export default function CategoryPage() {
           </select>
         </div>
 
+        {/* LİSTE */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
@@ -133,7 +175,12 @@ export default function CategoryPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex items-center justify-between group"
+                className={`bg-white p-6 rounded-xl shadow-sm border transition-all flex items-center justify-between group 
+                  ${
+                    pendingUpdates.hasOwnProperty(item.id)
+                      ? "border-orange-300 ring-1 ring-orange-100"
+                      : "border-gray-100"
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="bg-gray-50 p-3 rounded-full group-hover:bg-blue-50 transition-colors">
@@ -149,16 +196,12 @@ export default function CategoryPage() {
                     >
                       {item.title}
                     </h3>
-
-                    {/* AÇIKLAMA VE SAHİP BİLGİSİ */}
                     <div className="flex flex-wrap gap-2 items-center mt-1">
                       {item.description && (
                         <p className="text-sm text-gray-500">
                           {item.description}
                         </p>
                       )}
-
-                      {/* EĞER SAHİBİ VARSA GÖSTER */}
                       {item.owner && (
                         <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
                           <User className="w-3 h-3" />
@@ -181,12 +224,21 @@ export default function CategoryPage() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
 
-            {items.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
-                <p className="text-gray-500">Bu listede henüz öğe yok.</p>
-              </div>
-            )}
+        {/* DEĞİŞİKLİKLERİ KAYDET BUTONU */}
+        {Object.keys(pendingUpdates).length > 0 && (
+          <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 animate-in slide-in-from-bottom-5 fade-in">
+            <button
+              onClick={saveChanges}
+              disabled={isSaving}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold text-lg transition-transform hover:scale-105"
+            >
+              {/* Buton içindeki loader'a gerek kalmadı çünkü toast gösteriyoruz ama görsel bütünlük için kalabilir */}
+              <Save className="w-6 h-6" />
+              {Object.keys(pendingUpdates).length} Değişikliği Kaydet
+            </button>
           </div>
         )}
       </div>

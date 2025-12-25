@@ -1,11 +1,12 @@
-// app/layout.tsx dosyasının içi (ilgili kısımları güncelle)
-
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-// İkonu import etmeyi unutma
 import { Plus } from "lucide-react";
 import Link from "next/link";
+
+// 1. İMPORTLARIMIZI EKLEYELİM
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +32,20 @@ export default function RootLayout({
         >
           <Plus className="w-8 h-8" />
         </Link>
+
+        {/* 2. TOAST CONTAINER'I EN ALTA EKLEYELİM */}
+        <ToastContainer
+          position="bottom-center" // Mesajlar altta çıksın
+          autoClose={3000} // 3 saniye sonra kapansın
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </body>
     </html>
   );

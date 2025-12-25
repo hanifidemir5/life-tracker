@@ -1,31 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // useEffect eklendi
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
-import { Save, X, Loader2 } from "lucide-react";
+import { Save, X, Loader2, PlusCircle } from "lucide-react"; // PlusCircle eklendi
+import { toast } from "react-toastify";
+import Link from "next/link"; // Link eklendi
+
+// Kategori tipi
+type Category = {
+  id: number;
+  key: string;
+  name: string;
+};
 
 export default function AddItemPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  // Kategorileri tutacak state (Başlangıçta boş)
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const [formData, setFormData] = useState({
     title: "",
-    category: "book",
+    category: "", // İlk başta boş, veri gelince seçeceğiz
     description: "",
-    owner: "Fatma", // Varsayılan değer
+    owner: "Fatma",
   });
-
-  const categories = [
-    { id: "book", name: "📚 Kitap" },
-    { id: "place", name: "📍 Gezilen Yer" },
-    { id: "activity", name: "🎨 Aktivite" },
-    { id: "lego", name: "🧩 Lego" },
-  ];
 
   const owners = ["Fatma", "Hanifi"];
 
-  // Sadece bu kategorilerde "Kimde?" sorusu sorulacak
+  // SAYFA YÜKLENİNCE KATEGORİLERİ ÇEK
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase.from("categories").select("*");
+      if (data) {
+        setCategories(data);
+        // Varsayılan olarak ilk kategoriyi seç
+        if (data.length > 0) {
+          setFormData((prev) => ({ ...prev, category: data[0].key }));
+        }
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const showOwnerField =
     formData.category === "book" || formData.category === "lego";
 
@@ -33,28 +52,35 @@ export default function AddItemPage() {
     e.preventDefault();
     setLoading(true);
 
-    try {
+    const insertPromise = new Promise(async (resolve, reject) => {
       const { error } = await supabase.from("items").insert([
         {
           title: formData.title,
           category: formData.category,
           description: formData.description,
-          // Eğer alan görünüyorsa seçilen kişiyi, görünmüyorsa null kaydet
           owner: showOwnerField ? formData.owner : null,
           status: false,
         },
       ]);
+      if (error) reject(error);
+      else resolve("success");
+    });
 
-      if (error) throw error;
-
-      router.push(`/${formData.category}`);
-      router.refresh();
-    } catch (error) {
-      console.error("Hata:", error);
-      alert("Kaydedilemedi!");
-    } finally {
-      setLoading(false);
-    }
+    await toast
+      .promise(
+        insertPromise,
+        {
+          pending: "Listeye ekleniyor...",
+          success: "Başarıyla eklendi! 🎉",
+          error: "Eklenirken bir sorun oluştu 🤯",
+        },
+        { position: "top-right" }
+      )
+      .then(() => {
+        router.push(`/${formData.category}`);
+        router.refresh();
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -78,7 +104,7 @@ export default function AddItemPage() {
             <input
               required
               type="text"
-              placeholder="Örn: 1984 Kitabı"
+              placeholder="Örn: Öğe ismi"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -88,9 +114,19 @@ export default function AddItemPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kategori
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Kategori
+              </label>
+              {/* Yeni Kategori Ekle Linki */}
+              <Link
+                href="/add-category"
+                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <PlusCircle className="w-3 h-3" /> Yeni Kategori
+              </Link>
+            </div>
+
             <select
               value={formData.category}
               onChange={(e) =>
@@ -98,15 +134,15 @@ export default function AddItemPage() {
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
             >
+              {/* Database'den gelen verileri listele */}
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
+                <option key={cat.id} value={cat.key}>
                   {cat.name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Sadece Kitap ve Lego ise gösterilen alan */}
           {showOwnerField && (
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2">
               <label className="block text-sm font-medium text-blue-800 mb-1">
