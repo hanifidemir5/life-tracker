@@ -2,21 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/app/lib/supebaseClient";
+import { supabase } from "@/app/lib/supebaseClient"; // Dosya yolunu kontrol et
 import {
-  Book,
-  MapPin,
-  Smile,
-  Box,
   CheckCircle,
   Circle,
   ArrowLeft,
   Loader2,
   User,
   Save,
+  Plus,
+  ChevronDown, // Dropdown oku için eklendi
 } from "lucide-react";
-// 1. İMPORT ET
 import { toast } from "react-toastify";
+import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
+import Link from "next/link";
 
 type Item = {
   id: number;
@@ -27,46 +26,79 @@ type Item = {
   owner?: string;
 };
 
+type Category = {
+  id: number;
+  key: string;
+  name: string;
+  icon_name: string;
+  color_class: string;
+};
+
 export default function CategoryPage() {
   const params = useParams();
   const router = useRouter();
-  const currentCategory = params.category as string;
+  const currentCategoryKey = params.category as string;
 
   const [items, setItems] = useState<Item[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [currentCategoryData, setCurrentCategoryData] =
+    useState<Category | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [pendingUpdates, setPendingUpdates] = useState<Record<number, boolean>>(
     {}
   );
-  // isSaving state'ine artık ihtiyacımız yok, toast.promise halledecek ama buton disable için tutabiliriz.
   const [isSaving, setIsSaving] = useState(false);
 
-  const categoryLabels: Record<string, string> = {
-    book: "📚 Kitap Listesi",
-    place: "📍 Gezilen Yerler",
-    activity: "🎨 Aktiviteler",
-    lego: "🧩 Lego Koleksiyonu",
-  };
+  // Custom Dropdown için State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("items")
-        .select("*")
-        .eq("category", currentCategory)
-        .order("id", { ascending: false });
 
-      if (error) {
+      try {
+        // 1. Kategorileri Çek
+        const { data: catData, error: catError } = await supabase
+          .from("categories")
+          .select("*")
+          .order("id");
+
+        if (catError) throw catError;
+
+        setCategories(catData || []);
+
+        // Şu anki sayfaya ait kategori verisini bul
+        const activeCategory = catData?.find(
+          (c) => c.key === currentCategoryKey
+        );
+        setCurrentCategoryData(activeCategory || null);
+
+        // 2. Öğeleri Çek
+        const { data: itemData, error: itemError } = await supabase
+          .from("items")
+          .select("*")
+          .eq("category", currentCategoryKey)
+          .order("id", { ascending: false });
+
+        if (itemError) throw itemError;
+
+        setItems(itemData || []);
+      } catch (error) {
         console.error(error);
-        toast.error("Veriler yüklenirken hata oluştu!"); // Hata toast'ı
-      } else {
-        setItems(data || []);
+        toast.error("Veriler yüklenirken hata oluştu!");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchItems();
-  }, [currentCategory]);
+    fetchData();
+  }, [currentCategoryKey]);
+
+  const getIconColorClass = (bgClass: string) => {
+    const colorOpt = colorOptions.find((c) => c.value === bgClass);
+    return colorOpt ? colorOpt.iconColor : "text-gray-500";
+  };
 
   const toggleStatus = (id: number, currentStatus: boolean) => {
     setItems(
@@ -74,104 +106,163 @@ export default function CategoryPage() {
         item.id === id ? { ...item, status: !currentStatus } : item
       )
     );
-
     setPendingUpdates((prev) => ({
       ...prev,
       [id]: !currentStatus,
     }));
   };
 
-  // 2. YENİ KAYDETME FONKSİYONU
   const saveChanges = async () => {
     setIsSaving(true);
-
     const updatesToProcess = Object.entries(pendingUpdates);
 
-    // İşlemi bir Promise olarak tanımlıyoruz
     const updatePromise = Promise.all(
       updatesToProcess.map(([id, newStatus]) =>
         supabase.from("items").update({ status: newStatus }).eq("id", id)
       )
     );
 
-    // 3. TOAST.PROMISE İLE BÜYÜYÜ YAPIYORUZ
     await toast.promise(updatePromise, {
       pending: "Değişiklikler buluta kaydediliyor... ☁️",
-      success: "Tüm veriler başarıyla güncellendi! 🎉",
-      error: "Kaydederken bir sorun oluştu 🤯",
+      success: "Başarıyla güncellendi! 🎉",
+      error: "Hata oluştu 🤯",
     });
 
-    // İşlem bitince temizlik
     setPendingUpdates({});
     setIsSaving(false);
   };
 
-  const getIcon = (category: string) => {
-    switch (category) {
-      case "book":
-        return <Book className="w-5 h-5 text-blue-500" />;
-      case "place":
-        return <MapPin className="w-5 h-5 text-red-500" />;
-      case "lego":
-        return <Box className="w-5 h-5 text-yellow-500" />;
-      case "activity":
-        return <Smile className="w-5 h-5 text-green-500" />;
-      default:
-        return <Circle className="w-5 h-5" />;
-    }
-  };
-
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCategoryChange = (key: string) => {
     if (Object.keys(pendingUpdates).length > 0) {
-      // Çıkış uyarısı için basit bir toast info kullanabiliriz veya confirm kalabilir.
-      // Confirm daha güvenlidir çünkü toast navigasyonu durdurmaz.
       const confirmLeave = confirm(
         "Kaydedilmemiş değişikliklerin var! Çıkarsan kaybolacak."
       );
       if (!confirmLeave) return;
     }
-    const selected = e.target.value;
-    selected === "home" ? router.push("/") : router.push(`/${selected}`);
+
+    // Dropdown'ı kapat ve yönlendir
+    setIsDropdownOpen(false);
+    key === "home" ? router.push("/") : router.push(`/${key}`);
   };
+
+  const headerTitle = currentCategoryData ? currentCategoryData.name : "Liste";
 
   return (
     <main className="min-h-screen bg-gray-50 p-8 pb-32">
       <div className="max-w-4xl mx-auto">
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-3">
+        {/* HEADER KISMI */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-20">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => router.push("/")}
               className="p-2 hover:bg-gray-100 rounded-full transition"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">
-              {categoryLabels[currentCategory] || "Liste"}
-            </h1>
+
+            {/* DİNAMİK HEADER İKONU VE BAŞLIK */}
+            <div className="flex items-center gap-3">
+              {currentCategoryData && (
+                <div
+                  className={`p-2 rounded-full ${currentCategoryData.color_class.replace(
+                    "hover:",
+                    ""
+                  )} bg-opacity-50`}
+                >
+                  {getIconComponent(
+                    currentCategoryData.icon_name,
+                    `w-6 h-6 ${getIconColorClass(
+                      currentCategoryData.color_class
+                    )}`
+                  )}
+                </div>
+              )}
+              <h1 className="text-2xl font-bold text-gray-800">
+                {headerTitle}
+              </h1>
+            </div>
           </div>
 
-          <select
-            value={currentCategory}
-            onChange={handleCategoryChange}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none bg-gray-50 text-gray-700 cursor-pointer min-w-[200px]"
-          >
-            <option value="home">🏠 Ana Sayfaya Dön</option>
-            <option disabled>──────────</option>
-            <option value="book">📚 Kitaplar</option>
-            <option value="place">📍 Gezilen Yerler</option>
-            <option value="activity">🎨 Aktiviteler</option>
-            <option value="lego">🧩 Legolar</option>
-          </select>
+          {/* --- CUSTOM DROPDOWN BAŞLANGICI --- */}
+          <div className="relative min-w-[240px]">
+            {/* 1. Tetikleyici Buton */}
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:border-gray-400 transition-colors"
+            >
+              <span className="font-medium truncate mr-2">
+                {currentCategoryData?.name || "Seçiniz"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-500 transition-transform ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* 2. Dışarı Tıklama Yakalayıcı */}
+            {isDropdownOpen && (
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setIsDropdownOpen(false)}
+              />
+            )}
+
+            {/* 3. Açılır Liste */}
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                {/* Ana Sayfa Seçeneği */}
+                <div
+                  onClick={() => handleCategoryChange("home")}
+                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-gray-700 border-b border-gray-100"
+                >
+                  <span className="text-xl">🏠</span>
+                  <span className="font-medium">Ana Sayfaya Dön</span>
+                </div>
+
+                {/* Kategoriler */}
+                <div className="max-h-[300px] overflow-y-auto">
+                  {categories.map((cat) => (
+                    <div
+                      key={cat.id}
+                      onClick={() => handleCategoryChange(cat.key)}
+                      className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors
+                        ${
+                          currentCategoryKey === cat.key
+                            ? "bg-blue-50 text-blue-700"
+                            : "hover:bg-gray-50 text-gray-700"
+                        }
+                      `}
+                    >
+                      {/* Dropdown İçi İkon */}
+                      <div
+                        className={`p-1.5 rounded-full ${cat.color_class.replace(
+                          "hover:",
+                          ""
+                        )} bg-opacity-30`}
+                      >
+                        {getIconComponent(
+                          cat.icon_name,
+                          `w-4 h-4 ${getIconColorClass(cat.color_class)}`
+                        )}
+                      </div>
+                      <span className="font-medium">{cat.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {/* --- CUSTOM DROPDOWN BİTİŞİ --- */}
         </div>
 
-        {/* LİSTE */}
+        {/* LİSTE KISMI */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4 z-0">
             {items.map((item) => (
               <div
                 key={item.id}
@@ -183,9 +274,22 @@ export default function CategoryPage() {
                   }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="bg-gray-50 p-3 rounded-full group-hover:bg-blue-50 transition-colors">
-                    {getIcon(item.category)}
+                  {/* LİSTE ELEMANI İKONU */}
+                  <div
+                    className={`p-3 rounded-full transition-colors ${
+                      currentCategoryData?.color_class.replace("hover:", "") ||
+                      "bg-gray-50"
+                    }`}
+                  >
+                    {currentCategoryData &&
+                      getIconComponent(
+                        currentCategoryData.icon_name,
+                        `w-5 h-5 ${getIconColorClass(
+                          currentCategoryData.color_class
+                        )}`
+                      )}
                   </div>
+
                   <div>
                     <h3
                       className={`font-semibold text-lg ${
@@ -224,10 +328,23 @@ export default function CategoryPage() {
                 </button>
               </div>
             ))}
+
+            {items.length === 0 && (
+              <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300 flex flex-col items-center">
+                <Link
+                  href="/add"
+                  className="bg-gray-300 p-4 rounded-full mb-3 hover:bg-blue-600 text-gray-600 hover:text-white 200 transition"
+                >
+                  <Plus className="w-8 h-8 " />
+                </Link>
+                <p className="text-gray-500 font-medium">
+                  Bu listede henüz hiç öğe yok.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* DEĞİŞİKLİKLERİ KAYDET BUTONU */}
         {Object.keys(pendingUpdates).length > 0 && (
           <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 animate-in slide-in-from-bottom-5 fade-in">
             <button
@@ -235,7 +352,6 @@ export default function CategoryPage() {
               disabled={isSaving}
               className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold text-lg transition-transform hover:scale-105"
             >
-              {/* Buton içindeki loader'a gerek kalmadı çünkü toast gösteriyoruz ama görsel bütünlük için kalabilir */}
               <Save className="w-6 h-6" />
               {Object.keys(pendingUpdates).length} Değişikliği Kaydet
             </button>
