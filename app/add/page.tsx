@@ -289,7 +289,7 @@ export default function AddItemPage() {
               value={listText}
               onChange={(e) => setListText(e.target.value)}
               placeholder="Örnek:&#10;1. Dune - Frank Herbert&#10;2. 1984&#10;3. Simyacı"
-              className="flex-1 w-full border border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none mb-4 text-sm"
+              className="flex-1 w-full border text-gray-800 border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none mb-4 text-sm"
             />
             <button
               onClick={handleProcessList}
