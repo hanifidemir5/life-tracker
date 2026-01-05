@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/app/lib/supebaseClient"; // Dosya yolunu kontrol et
+import { supabase } from "@/app/lib/supebaseClient";
 import {
   CheckCircle,
   Circle,
@@ -11,7 +11,10 @@ import {
   User,
   Save,
   Plus,
-  ChevronDown, // Dropdown oku için eklendi
+  ChevronDown,
+  Pencil,
+  Clock, // Bekliyor ikonu için
+  CheckCheck, // Tamamlandı ikonu için
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
@@ -49,32 +52,25 @@ export default function CategoryPage() {
     {}
   );
   const [isSaving, setIsSaving] = useState(false);
-
-  // Custom Dropdown için State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-
       try {
-        // 1. Kategorileri Çek
         const { data: catData, error: catError } = await supabase
           .from("categories")
           .select("*")
           .order("id");
 
         if (catError) throw catError;
-
         setCategories(catData || []);
 
-        // Şu anki sayfaya ait kategori verisini bul
         const activeCategory = catData?.find(
           (c) => c.key === currentCategoryKey
         );
         setCurrentCategoryData(activeCategory || null);
 
-        // 2. Öğeleri Çek
         const { data: itemData, error: itemError } = await supabase
           .from("items")
           .select("*")
@@ -84,6 +80,7 @@ export default function CategoryPage() {
         if (itemError) throw itemError;
 
         setItems(itemData || []);
+        setPendingUpdates({});
       } catch (error) {
         console.error(error);
         toast.error("Veriler yüklenirken hata oluştu!");
@@ -101,20 +98,31 @@ export default function CategoryPage() {
   };
 
   const toggleStatus = (id: number, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
     setItems(
       items.map((item) =>
-        item.id === id ? { ...item, status: !currentStatus } : item
+        item.id === id ? { ...item, status: newStatus } : item
       )
     );
-    setPendingUpdates((prev) => ({
-      ...prev,
-      [id]: !currentStatus,
-    }));
+    setPendingUpdates((prev) => {
+      const newState = { ...prev };
+      if (newState.hasOwnProperty(id)) {
+        delete newState[id];
+      } else {
+        newState[id] = newStatus;
+      }
+      return newState;
+    });
   };
 
   const saveChanges = async () => {
     setIsSaving(true);
     const updatesToProcess = Object.entries(pendingUpdates);
+
+    if (updatesToProcess.length === 0) {
+      setIsSaving(false);
+      return;
+    }
 
     const updatePromise = Promise.all(
       updatesToProcess.map(([id, newStatus]) =>
@@ -123,9 +131,9 @@ export default function CategoryPage() {
     );
 
     await toast.promise(updatePromise, {
-      pending: "Değişiklikler buluta kaydediliyor... ☁️",
+      pending: "Değişiklikler kaydediliyor...",
       success: "Başarıyla güncellendi! 🎉",
-      error: "Hata oluştu 🤯",
+      error: "Hata oluştu",
     });
 
     setPendingUpdates({});
@@ -139,8 +147,6 @@ export default function CategoryPage() {
       );
       if (!confirmLeave) return;
     }
-
-    // Dropdown'ı kapat ve yönlendir
     setIsDropdownOpen(false);
     key === "home" ? router.push("/") : router.push(`/${key}`);
   };
@@ -150,7 +156,7 @@ export default function CategoryPage() {
   return (
     <main className="min-h-screen bg-gray-50 p-8 pb-32">
       <div className="max-w-4xl mx-auto">
-        {/* HEADER KISMI */}
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-20">
           <div className="flex items-center gap-4">
             <button
@@ -160,7 +166,6 @@ export default function CategoryPage() {
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
 
-            {/* DİNAMİK HEADER İKONU VE BAŞLIK */}
             <div className="flex items-center gap-3">
               {currentCategoryData && (
                 <div
@@ -183,9 +188,8 @@ export default function CategoryPage() {
             </div>
           </div>
 
-          {/* --- CUSTOM DROPDOWN BAŞLANGICI --- */}
+          {/* DROPDOWN */}
           <div className="relative min-w-[240px]">
-            {/* 1. Tetikleyici Buton */}
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:border-gray-400 transition-colors"
@@ -200,7 +204,6 @@ export default function CategoryPage() {
               />
             </button>
 
-            {/* 2. Dışarı Tıklama Yakalayıcı */}
             {isDropdownOpen && (
               <div
                 className="fixed inset-0 z-10"
@@ -208,10 +211,8 @@ export default function CategoryPage() {
               />
             )}
 
-            {/* 3. Açılır Liste */}
             {isDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                {/* Ana Sayfa Seçeneği */}
                 <div
                   onClick={() => handleCategoryChange("home")}
                   className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-gray-700 border-b border-gray-100"
@@ -220,7 +221,6 @@ export default function CategoryPage() {
                   <span className="font-medium">Ana Sayfaya Dön</span>
                 </div>
 
-                {/* Kategoriler */}
                 <div className="max-h-[300px] overflow-y-auto">
                   {categories.map((cat) => (
                     <div
@@ -234,7 +234,6 @@ export default function CategoryPage() {
                         }
                       `}
                     >
-                      {/* Dropdown İçi İkon */}
                       <div
                         className={`p-1.5 rounded-full ${cat.color_class.replace(
                           "hover:",
@@ -253,10 +252,9 @@ export default function CategoryPage() {
               </div>
             )}
           </div>
-          {/* --- CUSTOM DROPDOWN BİTİŞİ --- */}
         </div>
 
-        {/* LİSTE KISMI */}
+        {/* LİSTE */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
@@ -266,15 +264,24 @@ export default function CategoryPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className={`bg-white p-6 rounded-xl shadow-sm border transition-all flex items-center justify-between group 
+                className={`bg-white p-6 pt-8 rounded-xl shadow-sm border transition-all flex items-center justify-between relative group
                   ${
                     pendingUpdates.hasOwnProperty(item.id)
                       ? "border-orange-300 ring-1 ring-orange-100"
                       : "border-gray-100"
                   }`}
               >
+                {/* Edit Butonu */}
+                <Link
+                  href={`/update/${item.id}`}
+                  className="absolute top-2 left-2 p-1.5 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Düzenle"
+                >
+                  <Pencil className="w-5 h-5" />
+                </Link>
+
                 <div className="flex items-center gap-4">
-                  {/* LİSTE ELEMANI İKONU */}
+                  {/* Kategori İkonu */}
                   <div
                     className={`p-3 rounded-full transition-colors ${
                       currentCategoryData?.color_class.replace("hover:", "") ||
@@ -290,22 +297,45 @@ export default function CategoryPage() {
                       )}
                   </div>
 
+                  {/* Metin Alanı */}
                   <div>
+                    {/* --- DEĞİŞİKLİK 1: line-through kaldırıldı, renk ayarlandı --- */}
                     <h3
-                      className={`font-semibold text-lg ${
-                        item.status
-                          ? "text-gray-400 line-through"
-                          : "text-gray-900"
+                      className={`font-semibold text-lg transition-colors ${
+                        item.status ? "text-gray-500" : "text-gray-900"
                       }`}
                     >
                       {item.title}
                     </h3>
+
                     <div className="flex flex-wrap gap-2 items-center mt-1">
+                      {/* --- DEĞİŞİKLİK 2: Durum Etiketi (Tamamlandı/Bekliyor) --- */}
+                      <span
+                        className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${
+                          item.status
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        {item.status ? (
+                          <>
+                            <CheckCheck className="w-3 h-3" /> Tamamlandı
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3" /> Bekliyor
+                          </>
+                        )}
+                      </span>
+
+                      {/* Açıklama */}
                       {item.description && (
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 border-l pl-2 border-gray-300">
                           {item.description}
                         </p>
                       )}
+
+                      {/* Sahip */}
                       {item.owner && (
                         <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
                           <User className="w-3 h-3" />
@@ -316,6 +346,7 @@ export default function CategoryPage() {
                   </div>
                 </div>
 
+                {/* Checkbox Butonu */}
                 <button
                   onClick={() => toggleStatus(item.id, item.status)}
                   className="pl-4 hover:scale-110 transition-transform"
@@ -345,6 +376,7 @@ export default function CategoryPage() {
           </div>
         )}
 
+        {/* KAYDET BUTONU */}
         {Object.keys(pendingUpdates).length > 0 && (
           <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 animate-in slide-in-from-bottom-5 fade-in">
             <button
