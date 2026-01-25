@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
-import { Loader2, Plus, Pencil } from "lucide-react"; // Pencil eklendi
+import { Loader2, Plus, Pencil, Users } from "lucide-react"; // Pencil ve Users eklendi
+import Link from "next/link";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
 
 type Category = {
@@ -45,7 +46,10 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
-      <div className="text-center mb-10">
+      <div className="text-center mb-10 relative">
+        <Link href="/settings" className="absolute top-0 right-0 p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Partner Ayarları">
+          <Users className="w-6 h-6" />
+        </Link>
         <h1 className="text-4xl font-extrabold text-gray-900 mb-3">
           Life Tracker
         </h1>
@@ -73,12 +77,26 @@ export default function Home() {
               <Pencil className="w-4 h-4" />
             </button>
 
-            <div className="mb-4 bg-white p-4 rounded-full shadow-sm">
-              {getIconComponent(
-                cat.icon_name,
-                `w-8 h-8 ${getIconColorClass(cat.color_class)}`
-              )}
-            </div>
+            {(() => {
+              const isImage =
+                cat.icon_name &&
+                (cat.icon_name.startsWith("http") ||
+                  cat.icon_name.startsWith("/"));
+
+              return (
+                <div
+                  className={`mb-4 bg-white rounded-full shadow-sm ${isImage ? "p-1" : "p-4"
+                    }`}
+                >
+                  {getIconComponent(
+                    cat.icon_name,
+                    isImage
+                      ? "w-16 h-16"
+                      : `w-8 h-8 ${getIconColorClass(cat.color_class)}`
+                  )}
+                </div>
+              );
+            })()}
             <span className="text-xl font-semibold text-gray-800">
               {cat.name}
             </span>
@@ -97,6 +115,15 @@ export default function Home() {
           </span>
         </button>
       </div>
-    </main>
+
+
+      {/* Floating Add Item Button (Global) */}
+      <Link
+        href="/add"
+        className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-xl transition-transform hover:scale-110 flex items-center justify-center z-50"
+      >
+        <Plus className="w-8 h-8" />
+      </Link>
+    </main >
   );
 }

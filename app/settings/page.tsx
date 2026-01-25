@@ -1,0 +1,259 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/app/lib/supebaseClient";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { ArrowLeft, Copy, Check, Heart, UserPlus, Loader2, Users } from "lucide-react";
+
+export default function SettingsPage() {
+    const router = useRouter();
+    const [loading, setLoading] = useState(true);
+    const [userId, setUserId] = useState<string | null>(null);
+    const [partnerId, setPartnerId] = useState("");
+    const [currentPartner, setCurrentPartner] = useState<string | null>(null);
+    const [isCopied, setIsCopied] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            if (!user) {
+                router.push("/login");
+                return;
+            }
+
+            setUserId(user.id);
+            await checkExistingPartner(user.id);
+            setLoading(false);
+        };
+
+        checkUser();
+    }, [router]);
+
+    const checkExistingPartner = async (myId: string) => {
+        // Çift var mı kontrol et
+        const { data, error } = await supabase
+            .from("couples")
+            .select("*")
+            .or(`user1_id.eq.${myId},user2_id.eq.${myId}`)
+            .maybeSingle();
+
+        if (data) {
+            // Eğer bir kayıt varsa, partnerin ID'sini bul
+            const partner = data.user1_id === myId ? data.user2_id : data.user1_id;
+            setCurrentPartner(partner);
+        }
+    };
+
+    const handleCopy = () => {
+        if (userId) {
+            navigator.clipboard.writeText(userId);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+            toast.success("Kod kopyalandı!");
+        }
+    };
+
+    const handleConnect = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!partnerId.trim()) {
+            toast.warn("Lütfen partnerinizin kodunu girin.");
+            return;
+        }
+
+        if (partnerId === userId) {
+            toast.error("Kendinizle eşleşemezsiniz! 😅");
+            return;
+        }
+
+        setSaving(true);
+        try {
+            // 1. Önce partner ID'nin geçerli olup olmadığını kontrol edemiyoruz (yetki yok),
+            // direkt eklemeye çalışacağız. Eğer foreign key hatası verirse user yok demektir.
+
+            // Biz user1, partner user2 olsun.
+            const { error } = await supabase.from("couples").insert([
+                {
+                    user1_id: userId,
+                    user2_id: partnerId,
+                },
+            ]);
+
+            if (error) {
+                if (error.code === "23505") {
+                    toast.info("Zaten eşleşmişsiniz!");
+                } else if (error.code === "23503") { // Foreign key violation
+                    toast.error("Bu koda sahip bir kullanıcı bulunamadı.");
+                } else {
+                    console.error(error);
+                    // Belki biz user2 yerindeyizdir? Veya RLS hatası?
+                    // RLS hatası ise kullanıcıya bildirim göster.
+                    toast.error("Hata: " + error.message);
+                }
+                return;
+            }
+
+            toast.success("Tebrikler! Artık eşleştiniz. 🎉");
+            setCurrentPartner(partnerId);
+            setPartnerId("");
+            router.refresh();
+
+        } catch (err) {
+            toast.error("Bir hata oluştu.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDisconnect = async () => {
+        if (!confirm("Partnerinizle bağlantıyı kesmek istediğinize emin misiniz?")) return;
+
+        setSaving(true);
+        try {
+            // Kendi olduğumuz tüm çift kayıtlarını sil
+            const { error } = await supabase
+                .from("couples")
+                .delete()
+                .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
+
+            if (error) throw error;
+
+            toast.info("Bağlantı kesildi.");
+            setCurrentPartner(null);
+            router.refresh();
+        } catch (error: any) {
+            toast.error("Hata: " + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            </div>
+        );
+    }
+
+    return (
+        <main className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                {/* Header */}
+                <div className="bg-indigo-600 p-6 text-white text-center relative">
+                    <button
+                        onClick={() => router.push("/")}
+                        className="absolute left-6 top-6 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                        <Heart className="w-8 h-8 text-white animate-pulse" fill="white" />
+                    </div>
+                    <h1 className="text-2xl font-bold">Partner Bağlantısı</h1>
+                    <p className="text-indigo-100 text-sm mt-1">Hayatınızı birlikte takip edin</p>
+                </div>
+
+                <div className="p-8 space-y-8">
+
+                    {/* Durum Göstergesi */}
+                    {currentPartner ? (
+                        <div className="bg-green-50 border border-green-100 rounded-xl p-6 text-center animate-in fade-in zoom-in relative group">
+                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Users className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-lg font-bold text-green-800 mb-1">Bağlantı Aktif!</h3>
+                            <p className="text-green-600 text-sm mb-2">Partnerinizle eşleştiniz.</p>
+                            <div className="text-xs text-green-500 font-mono bg-white inline-block px-2 py-1 rounded border border-green-200 mb-4">
+                                {currentPartner}
+                            </div>
+
+                            <button
+                                onClick={handleDisconnect}
+                                disabled={saving}
+                                className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Bağlantıyı Kes"}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
+                            <p className="text-orange-800 text-sm font-medium">Henüz bir partnerle eşleşmediniz.</p>
+                        </div>
+                    )}
+
+
+                    {/* Benim Kodum */}
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
+                            Sizin Bağlantı Kodunuz
+                        </label>
+                        <div
+                            onClick={handleCopy}
+                            className="group relative flex items-center justify-between p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                        >
+                            <code className="text-sm font-mono text-gray-700 font-semibold break-all mr-2">
+                                {userId}
+                            </code>
+                            <div className="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                                {isCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-indigo-500" />}
+                            </div>
+                            {isCopied && (
+                                <span className="absolute -top-8 right-0 bg-black text-white text-xs py-1 px-2 rounded shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                                    Kopyalandı!
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">
+                            Bu kodu partnerinizle paylaşın.
+                        </p>
+                    </div>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500 font-medium">VEYA</span>
+                        </div>
+                    </div>
+
+                    {/* Partner Kodu Gir */}
+                    {!currentPartner && (
+                        <form onSubmit={handleConnect} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
+                                    Partnerinizin Kodu
+                                </label>
+                                <input
+                                    type="text"
+                                    value={partnerId}
+                                    onChange={(e) => setPartnerId(e.target.value)}
+                                    placeholder="Partnerinizin kodunu buraya yapıştırın..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {saving ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <UserPlus className="w-5 h-5" />
+                                )}
+                                {saving ? "Bağlanılıyor..." : "Partneri Ekle"}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </main>
+    );
+}

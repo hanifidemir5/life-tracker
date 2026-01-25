@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../lib/supebaseClient";
 import {
   Save,
@@ -65,17 +65,28 @@ export default function AddItemPage() {
   // Butonların aktif/pasif durumunu kontrol eden mantık
   const isActionDisabled = isOwnerRequired && !formData.owner;
 
+  const searchParams = useSearchParams();
+  const preSelectedCategory = searchParams.get("category");
+
   useEffect(() => {
     const fetchCategories = async () => {
       const { data } = await supabase.from("categories").select("*");
       if (data) {
         setCategories(data);
-        if (data.length > 0)
+        if (preSelectedCategory) {
+          // URL'den gelen kategori varsa onu seç
+          const exists = data.find((c) => c.key === preSelectedCategory);
+          if (exists) {
+            setFormData((prev) => ({ ...prev, category: preSelectedCategory }));
+          }
+        } else if (data.length > 0 && !formData.category) {
+          // Yoksa varsayılan olarak ilkini seç (eğer henüz seçili değilse)
           setFormData((prev) => ({ ...prev, category: data[0].key }));
+        }
       }
     };
     fetchCategories();
-  }, []);
+  }, [preSelectedCategory]);
 
   const stopAnalyzing = () => {
     setAnalyzingMethod(null);
@@ -181,6 +192,16 @@ export default function AddItemPage() {
       formData.category === "book" || formData.category === "lego";
 
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error("Oturum açmanız gerekiyor.");
+        setLoading(false);
+        return;
+      }
+
       const booksToInsert = foundBooks
         .filter((_, index) => selectedIndices.has(index))
         .map((book) => ({
@@ -190,6 +211,7 @@ export default function AddItemPage() {
           // EĞER KATEGORİ BOOK/LEGO DEĞİLSE OWNER KESİNLİKLE NULL GİDER
           owner: currentIsOwnerRequired ? formData.owner : null,
           status: false,
+          user: user.id, // Kullanıcı ID eklendi
         }));
 
       const { error } = await supabase.from("items").insert(booksToInsert);
@@ -226,7 +248,18 @@ export default function AddItemPage() {
       return;
     }
     setLoading(true);
+
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error("Oturum açmanız gerekiyor.");
+        setLoading(false);
+        return;
+      }
+
       await supabase.from("items").insert([
         {
           title: formData.title,
@@ -235,6 +268,7 @@ export default function AddItemPage() {
           // EĞER KATEGORİ BOOK/LEGO DEĞİLSE OWNER KESİNLİKLE NULL GİDER
           owner: currentIsOwnerRequired ? formData.owner : null,
           status: false,
+          user: user.id, // Kullanıcı ID eklendi
         },
       ]);
       toast.success("Eklendi!");
@@ -321,11 +355,10 @@ export default function AddItemPage() {
                   <div
                     key={idx}
                     onClick={() => toggleBookSelection(idx)}
-                    className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:bg-gray-50"
-                    }`}
+                    className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-all ${isSelected
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:bg-gray-50"
+                      }`}
                   >
                     <div className="mt-1">
                       {isSelected ? (
@@ -401,7 +434,9 @@ export default function AddItemPage() {
                   owner: shouldClearOwner ? "" : formData.owner,
                 });
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              disabled={!!preSelectedCategory}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white ${preSelectedCategory ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
             >
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.key}>
@@ -414,16 +449,14 @@ export default function AddItemPage() {
           {/* OWNER UI (SADECE KİTAP/LEGO İSE GÖZÜKÜR) */}
           {isOwnerRequired && (
             <div
-              className={`p-4 rounded-xl border transition-colors ${
-                !formData.owner
-                  ? "bg-red-50 border-red-200 animate-pulse"
-                  : "bg-blue-50 border-blue-100"
-              }`}
+              className={`p-4 rounded-xl border transition-colors ${!formData.owner
+                ? "bg-red-50 border-red-200 animate-pulse"
+                : "bg-blue-50 border-blue-100"
+                }`}
             >
               <label
-                className={`block text-sm font-medium mb-2 ${
-                  !formData.owner ? "text-red-600" : "text-blue-800"
-                }`}
+                className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
+                  }`}
               >
                 Şu an kimde?{" "}
                 <span className="text-xs font-normal opacity-70">
@@ -450,11 +483,10 @@ export default function AddItemPage() {
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <span
-                      className={`${
-                        formData.owner === person
-                          ? "text-gray-900 font-medium"
-                          : "text-gray-600"
-                      } group-hover:text-gray-900`}
+                      className={`${formData.owner === person
+                        ? "text-gray-900 font-medium"
+                        : "text-gray-600"
+                        } group-hover:text-gray-900`}
                     >
                       {person}
                     </span>
@@ -469,12 +501,11 @@ export default function AddItemPage() {
           <div className="grid grid-cols-3 gap-2">
             {/* 1. KAMERA BUTONU */}
             <label
-              onClick={(e) => handleSpecialActionClick(e, () => {})}
-              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${
-                isActionDisabled
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-br from-purple-500 to-indigo-600"
-              }`}
+              onClick={(e) => handleSpecialActionClick(e, () => { })}
+              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-br from-purple-500 to-indigo-600"
+                }`}
             >
               {analyzingMethod === "camera" ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -498,11 +529,10 @@ export default function AddItemPage() {
                 handleSpecialActionClick(e, () => setShowTextModal(true))
               }
               disabled={analyzingMethod !== null || isActionDisabled}
-              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${
-                isActionDisabled
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-br from-pink-500 to-rose-600"
-              }`}
+              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-br from-pink-500 to-rose-600"
+                }`}
             >
               {analyzingMethod === "text" ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -514,12 +544,11 @@ export default function AddItemPage() {
 
             {/* 3. CSV BUTONU */}
             <label
-              onClick={(e) => handleSpecialActionClick(e, () => {})}
-              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${
-                isActionDisabled
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-br from-emerald-500 to-teal-600"
-              }`}
+              onClick={(e) => handleSpecialActionClick(e, () => { })}
+              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-br from-emerald-500 to-teal-600"
+                }`}
             >
               {analyzingMethod === "csv" ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

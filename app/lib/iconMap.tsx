@@ -25,6 +25,17 @@ export const iconMap: Record<string, any> = {
 };
 
 export const getIconComponent = (iconName: string, className?: string) => {
+  // Eğer iconName bir URL ise (http/https ile başlıyorsa) resim olarak göster
+  if (iconName && (iconName.startsWith("http") || iconName.startsWith("/"))) {
+    return (
+      <img
+        src={iconName}
+        alt="Category Icon"
+        className={`${className} object-cover rounded-full`}
+      />
+    );
+  }
+
   const Icon = iconMap[iconName] || Circle;
   return <Icon className={className} />;
 };

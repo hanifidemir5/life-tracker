@@ -198,9 +198,8 @@ export default function CategoryPage() {
                 {currentCategoryData?.name || "Seçiniz"}
               </span>
               <ChevronDown
-                className={`w-4 h-4 text-gray-500 transition-transform ${
-                  isDropdownOpen ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -227,10 +226,9 @@ export default function CategoryPage() {
                       key={cat.id}
                       onClick={() => handleCategoryChange(cat.key)}
                       className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors
-                        ${
-                          currentCategoryKey === cat.key
-                            ? "bg-blue-50 text-blue-700"
-                            : "hover:bg-gray-50 text-gray-700"
+                        ${currentCategoryKey === cat.key
+                          ? "bg-blue-50 text-blue-700"
+                          : "hover:bg-gray-50 text-gray-700"
                         }
                       `}
                     >
@@ -265,10 +263,9 @@ export default function CategoryPage() {
               <div
                 key={item.id}
                 className={`bg-white p-6 pt-8 rounded-xl shadow-sm border transition-all flex items-center justify-between relative group
-                  ${
-                    pendingUpdates.hasOwnProperty(item.id)
-                      ? "border-orange-300 ring-1 ring-orange-100"
-                      : "border-gray-100"
+                  ${pendingUpdates.hasOwnProperty(item.id)
+                    ? "border-orange-300 ring-1 ring-orange-100"
+                    : "border-gray-100"
                   }`}
               >
                 {/* Edit Butonu */}
@@ -283,10 +280,9 @@ export default function CategoryPage() {
                 <div className="flex items-center gap-4">
                   {/* Kategori İkonu */}
                   <div
-                    className={`p-3 rounded-full transition-colors ${
-                      currentCategoryData?.color_class.replace("hover:", "") ||
+                    className={`p-3 rounded-full transition-colors ${currentCategoryData?.color_class.replace("hover:", "") ||
                       "bg-gray-50"
-                    }`}
+                      }`}
                   >
                     {currentCategoryData &&
                       getIconComponent(
@@ -301,9 +297,8 @@ export default function CategoryPage() {
                   <div>
                     {/* --- DEĞİŞİKLİK 1: line-through kaldırıldı, renk ayarlandı --- */}
                     <h3
-                      className={`font-semibold text-lg transition-colors ${
-                        item.status ? "text-gray-500" : "text-gray-900"
-                      }`}
+                      className={`font-semibold text-lg transition-colors ${item.status ? "text-gray-500" : "text-gray-900"
+                        }`}
                     >
                       {item.title}
                     </h3>
@@ -311,11 +306,10 @@ export default function CategoryPage() {
                     <div className="flex flex-wrap gap-2 items-center mt-1">
                       {/* --- DEĞİŞİKLİK 2: Durum Etiketi (Tamamlandı/Bekliyor) --- */}
                       <span
-                        className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${
-                          item.status
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}
+                        className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${item.status
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                          }`}
                       >
                         {item.status ? (
                           <>
@@ -363,7 +357,7 @@ export default function CategoryPage() {
             {items.length === 0 && (
               <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300 flex flex-col items-center">
                 <Link
-                  href="/add"
+                  href={`/add?category=${currentCategoryKey}`}
                   className="bg-gray-300 p-4 rounded-full mb-3 hover:bg-blue-600 text-gray-600 hover:text-white 200 transition"
                 >
                   <Plus className="w-8 h-8 " />
@@ -389,7 +383,16 @@ export default function CategoryPage() {
             </button>
           </div>
         )}
+
       </div>
+
+      {/* Floating Add Button for this Category */}
+      <Link
+        href={`/add?category=${currentCategoryKey}`}
+        className="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-xl transition-transform hover:scale-110 flex items-center justify-center z-50"
+      >
+        <Plus className="w-8 h-8" />
+      </Link>
     </main>
   );
 }

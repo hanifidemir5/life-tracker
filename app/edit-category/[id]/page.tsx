@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
-import { Save, X, Loader2, Trash2 } from "lucide-react";
+import { Save, X, Loader2, Trash2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
 
@@ -15,12 +15,19 @@ export default function EditCategoryPage() {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
 
+  // Tab State: 'icon' | 'image'
+  const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
+
   const [formData, setFormData] = useState({
     name: "",
     key: "",
     icon_name: "Circle",
     color_class: "hover:bg-gray-50",
   });
+
+  // Resim Yükleme State'leri
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // 1. MEVCUT VERİYİ ÇEK
   useEffect(() => {
@@ -36,42 +43,95 @@ export default function EditCategoryPage() {
         router.push("/");
       } else {
         setFormData(data);
+
+        // Eğer mevcut ikon bir URL ise (http...)
+        if (
+          data.icon_name &&
+          (data.icon_name.startsWith("http") || data.icon_name.startsWith("/"))
+        ) {
+          setActiveTab("image");
+          setImagePreview(data.icon_name);
+        } else {
+          setActiveTab("icon");
+        }
       }
       setDataLoading(false);
     };
     fetchCategory();
   }, [id, router]);
 
+  // Dosya seçilince çalışır
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Önizleme oluştur
+      const objectUrl = URL.createObjectURL(file);
+      setImagePreview(objectUrl);
+    }
+  };
+
   // 2. GÜNCELLEME İŞLEMİ
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // --- ESKİ KODU SİLDİK, SADECE BU YENİ YAPI KALMALI ---
     const updateOperation = async () => {
+      let finalIconName = formData.icon_name;
+
+      if (activeTab === "image") {
+        if (selectedFile) {
+          // YENİ RESİM SEÇİLDİ -> YÜKLE
+          const fileExt = selectedFile.name.split(".").pop();
+          const fileName = `${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2)}.${fileExt}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("icons")
+            .upload(fileName, selectedFile);
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabase.storage
+            .from("icons")
+            .getPublicUrl(fileName);
+
+          finalIconName = publicUrlData.publicUrl;
+        } else if (imagePreview) {
+          // YENİ RESİM SEÇİLMEDİ AMA VAR OLAN RESİM DURUYOR
+          // Bu durumda imagePreview'daki URL'i (yani eskisi) kullanırız.
+          finalIconName = imagePreview;
+        } else {
+          // Ne dosya var ne preview -> Hata veya uyarı
+          throw new Error("Lütfen bir resim seçin veya İkon tabını kullanın.");
+        }
+      }
+
+      // Veritabanını güncelle
       const { error } = await supabase
         .from("categories")
         .update({
           name: formData.name,
-          icon_name: formData.icon_name,
+          icon_name: finalIconName,
           color_class: formData.color_class,
         })
         .eq("id", id);
 
-      // Supabase hata döndürürse, toast'ın "error" durumuna geçmesi için hatayı fırlatıyoruz
       if (error) throw error;
     };
-    // -----------------------------------------------------
 
-    await toast.promise(updateOperation(), {
-      pending: "Güncelleniyor...",
-      success: "Kategori güncellendi! 🎉",
-      error: "Hata oluştu.",
-    });
-
-    setLoading(false);
-    router.push("/");
-    router.refresh();
+    await toast
+      .promise(updateOperation(), {
+        pending: "Güncelleniyor...",
+        success: "Kategori güncellendi! 🎉",
+        error: "Hata oluştu.",
+      })
+      .then(() => {
+        router.push("/");
+        router.refresh();
+      })
+      .finally(() => setLoading(false));
   };
 
   // 3. SİLME İŞLEMİ
@@ -152,30 +212,111 @@ export default function EditCategoryPage() {
             </div>
           </div>
 
-          {/* İKON SEÇİMİ */}
+          {/* TABLARI SEÇME (İkon Listesi vs Resim Yükle) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              İkon Seç
+              Görünüm Seçimi
             </label>
-            <div className="grid grid-cols-5 gap-3">
-              {Object.keys(iconMap).map((iconKey) => (
-                <div
-                  key={iconKey}
-                  onClick={() =>
-                    setFormData({ ...formData, icon_name: iconKey })
-                  }
-                  className={`cursor-pointer p-3 rounded-xl flex items-center justify-center border transition-all hover:bg-gray-50
-                            ${
-                              formData.icon_name === iconKey
-                                ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
-                                : "border-gray-200"
-                            }
-                        `}
-                >
-                  {getIconComponent(iconKey, "w-6 h-6 text-gray-600")}
-                </div>
-              ))}
+            <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
+              <button
+                type="button"
+                onClick={() => setActiveTab("icon")}
+                className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "icon"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+                  }`}
+              >
+                İkon Listesi
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("image")}
+                className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "image"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+                  }`}
+              >
+                Resim Yükle
+              </button>
             </div>
+
+            {/* 1. SEÇENEK: İKON LİSTESİ */}
+            {activeTab === "icon" && (
+              <div className="grid grid-cols-5 gap-3">
+                {Object.keys(iconMap).map((iconKey) => (
+                  <div
+                    key={iconKey}
+                    onClick={() =>
+                      setFormData({ ...formData, icon_name: iconKey })
+                    }
+                    className={`cursor-pointer p-3 rounded-xl flex items-center justify-center border transition-all hover:bg-gray-50
+                      ${formData.icon_name === iconKey && activeTab === "icon"
+                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
+                        : "border-gray-200"
+                      }
+                  `}
+                  >
+                    {getIconComponent(iconKey, "w-6 h-6 text-gray-600")}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 2. SEÇENEK: RESİM YÜKLEME */}
+            {activeTab === "image" && (
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
+                {imagePreview ? (
+                  <div className="relative mb-3">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-20 h-20 object-cover rounded-full shadow-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setImagePreview(null);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-2 p-3 bg-blue-50 text-blue-500 rounded-full">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                )}
+
+                {!imagePreview && (
+                  <>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Bir resim yükleyin
+                    </p>
+                    <p className="text-xs text-gray-400 mb-4">
+                      PNG, JPG veya GIF (Max 2MB)
+                    </p>
+                  </>
+                )}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="icon-upload"
+                />
+                {!imagePreview && (
+                  <label
+                    htmlFor="icon-upload"
+                    className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    Dosya Seç/Değiştir
+                  </label>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RENK SEÇİMİ */}
@@ -191,11 +332,10 @@ export default function EditCategoryPage() {
                     setFormData({ ...formData, color_class: color.value })
                   }
                   className={`cursor-pointer px-4 py-2 rounded-lg border transition-all whitespace-nowrap flex items-center gap-2
-                             ${
-                               formData.color_class === color.value
-                                 ? "border-gray-400 bg-gray-100 ring-1 ring-gray-300"
-                                 : "border-gray-200"
-                             }
+                             ${formData.color_class === color.value
+                      ? "border-gray-400 bg-gray-100 ring-1 ring-gray-300"
+                      : "border-gray-200"
+                    }
                         `}
                 >
                   <div
