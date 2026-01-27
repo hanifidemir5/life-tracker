@@ -14,6 +14,7 @@ export default function EditCategoryPage() {
 
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
@@ -23,6 +24,7 @@ export default function EditCategoryPage() {
     key: "",
     icon_name: "Circle",
     color_class: "hover:bg-gray-50",
+    is_owner_required: false,
   });
 
   // Resim Yükleme State'leri
@@ -115,6 +117,7 @@ export default function EditCategoryPage() {
           name: formData.name,
           icon_name: finalIconName,
           color_class: formData.color_class,
+          is_owner_required: formData.is_owner_required,
         })
         .eq("id", id);
 
@@ -136,27 +139,34 @@ export default function EditCategoryPage() {
 
   // 3. SİLME İŞLEMİ
   const handleDelete = async () => {
-    const confirmDelete = confirm(
-      "DİKKAT! Bu kategoriyi silersen içindeki TÜM EŞYALAR da silinecek. Emin misin?"
-    );
-    if (!confirmDelete) return;
-
+    setShowDeleteModal(false);
     setLoading(true);
 
     try {
       // Önce içindeki eşyaları temizle (Manual Cascade Delete)
       await supabase.from("items").delete().eq("category", formData.key);
 
-      // Sonra kategoriyi sil
-      const { error } = await supabase.from("categories").delete().eq("id", id);
+      // Sonra kategoriyi sil - use number for id comparison
+      const categoryId = typeof id === 'string' ? parseInt(id, 10) : id;
+      const { error, count } = await supabase
+        .from("categories")
+        .delete({ count: 'exact' })
+        .eq("id", categoryId);
+
+      console.log("Delete result:", { error, count, categoryId });
 
       if (error) throw error;
+
+      if (count === 0) {
+        toast.error("Kategori silinemedi - yetkiniz olmayabilir");
+        return;
+      }
 
       toast.success("Kategori ve içerik silindi 👋");
       router.push("/");
       router.refresh();
     } catch (error) {
-      console.error(error);
+      console.error("Delete error:", error);
       toast.error("Silinirken bir hata oluştu.");
     } finally {
       setLoading(false);
@@ -165,14 +175,14 @@ export default function EditCategoryPage() {
 
   if (dataLoading)
     return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-blue-500" />
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-rose-50 to-red-50">
+        <Loader2 className="animate-spin text-rose-500 w-8 h-8" />
       </div>
     );
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-lg border border-gray-100">
+    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 border-pink-100">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Kategori Düzenle</h1>
           <button
@@ -347,6 +357,22 @@ export default function EditCategoryPage() {
             </div>
           </div>
 
+          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <input
+              type="checkbox"
+              id="isOwnerRequired"
+              checked={formData.is_owner_required}
+              onChange={(e) => setFormData({ ...formData, is_owner_required: e.target.checked })}
+              className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
+            />
+            <label htmlFor="isOwnerRequired" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
+              Bu kategorideki öğeler için <strong>sahip</strong> seçilsin mi?
+              <p className="text-xs text-gray-500 font-normal mt-0.5">
+                (Örn: Kitaplar için kimde olduğunu takip etmek isterseniz işaretleyin)
+              </p>
+            </label>
+          </div>
+
           <div className="flex flex-col gap-3 pt-4">
             <button
               type="submit"
@@ -364,7 +390,7 @@ export default function EditCategoryPage() {
             {/* SİLME BUTONU */}
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteModal(true)}
               disabled={loading}
               className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 border border-red-200 transition-colors"
             >
@@ -372,6 +398,34 @@ export default function EditCategoryPage() {
               Kategoriyi Sil
             </button>
           </div>
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
+                <h3 className="text-xl font-bold text-red-600 mb-3">⚠️ Dikkat!</h3>
+                <p className="text-gray-700 mb-4">
+                  Bu kategoriyi silersen içindeki <strong>TÜM EŞYALAR</strong> da silinecek. Emin misin?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold text-gray-600"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="flex-1 py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold"
+                  >
+                    Evet, Sil
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </main>

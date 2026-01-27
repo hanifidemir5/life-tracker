@@ -74,7 +74,7 @@ export default function LoginPage() {
     // };
 
     return (
-        <main className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 p-4">
             {/* SUCCESS MODAL (Kayıt Başarılı) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -148,23 +148,46 @@ export default function LoginPage() {
                 </div>
             )}
 
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 transition-all">
-                <div className={`p-8 ${!isLogin ? "bg-indigo-50/50" : ""}`}>
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-pink-100 transition-all">
+                <div className={`p-8 ${!isLogin ? "bg-gradient-to-br from-pink-50 to-rose-50" : ""}`}>
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">
                             {isLogin ? "Tekrar Hoşgeldin!" : "Hesap Oluştur"}
                         </h1>
                         <p className="text-gray-500">
                             {isLogin
-                                ? "Life Tracker'a devam etmek için giriş yap."
+                                ? "Precious Memories'a devam etmek için giriş yap."
                                 : "Yeni bir macera için kayıt ol."}
                         </p>
                     </div>
 
                     <form
-                        action={handleSubmit}
+                        onSubmit={async (e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.currentTarget);
+                            await handleSubmit(formData);
+                        }}
                         className="space-y-4"
                     >
+                        {!isLogin && (
+                            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                                <label
+                                    htmlFor="fullName"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Ad Soyad
+                                </label>
+                                <input
+                                    id="fullName"
+                                    name="fullName"
+                                    type="text"
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-gray-900 placeholder-gray-400"
+                                    placeholder="Adınız Soyadınız"
+                                />
+                            </div>
+                        )}
+
                         <div>
                             <label
                                 htmlFor="email"
@@ -177,7 +200,7 @@ export default function LoginPage() {
                                 name="email"
                                 type="email"
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-black"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder-gray-400"
                                 placeholder="ornek@email.com"
                             />
                         </div>
@@ -194,7 +217,7 @@ export default function LoginPage() {
                                 name="password"
                                 type="password"
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-black"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder-gray-400"
                                 placeholder="********"
                             />
                         </div>
@@ -212,7 +235,7 @@ export default function LoginPage() {
                                     name="confirmPassword"
                                     type="password"
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-black"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder-gray-400"
                                     placeholder="********"
                                 />
                             </div>
@@ -222,15 +245,18 @@ export default function LoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full font-semibold py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2
+                                className={`w-full font-semibold py-3 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed
                   ${isLogin
-                                        ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                                        : "bg-green-600 hover:bg-green-700 text-white"
+                                        ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+                                        : "bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white"
                                     }
                 `}
                             >
                                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                                {isLogin ? "Giriş Yap" : "Kayıt Ol"}
+                                {loading
+                                    ? (isLogin ? "Giriş yapılıyor..." : "Kaydediliyor...")
+                                    : (isLogin ? "Giriş Yap" : "Kayıt Ol")
+                                }
                             </button>
                         </div>
                     </form>
@@ -242,7 +268,7 @@ export default function LoginPage() {
                                 setIsLogin(!isLogin);
                                 // Clear validation errors or inputs if needed
                             }}
-                            className="text-sm font-medium hover:underline transition-colors text-gray-600 hover:text-gray-900"
+                            className="text-sm font-medium hover:underline transition-colors text-gray-600 hover:text-rose-600"
                         >
                             {isLogin ? (
                                 <span>

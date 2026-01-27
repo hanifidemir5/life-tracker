@@ -14,6 +14,8 @@ import {
   ClipboardList,
   ArrowRight,
   FileSpreadsheet,
+  ImagePlus,
+  Trash2,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -27,6 +29,7 @@ type ScannedBook = {
   title: string;
   description: string;
   isExists?: boolean;
+  image_url?: string;
 };
 
 type AnalysisMethod = "camera" | "text" | "csv" | null;
@@ -53,14 +56,22 @@ export default function AddItemPage() {
     category: "",
     description: "",
     owner: "",
+    status: false,
   });
 
-  const owners = ["Fatma", "Hanifi"];
+  // Photo upload state (max 5 photos)
+  const MAX_PHOTOS = 5;
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
+  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ id: string; name: string } | null>(null);
 
   // --- KATEGORİYE GÖRE OWNER ZORUNLULUĞU ---
-  // Bu değişkeni render sırasında hesaplıyoruz
-  const isOwnerRequired =
-    formData.category === "book" || formData.category === "lego";
+  // Seçili kategorinin 'is_owner_required' özelliğini bul
+  const selectedCategoryObj = categories.find(c => c.key === formData.category);
+  const isOwnerRequired = selectedCategoryObj ? (selectedCategoryObj as any).is_owner_required : false;
 
   // Butonların aktif/pasif durumunu kontrol eden mantık
   const isActionDisabled = isOwnerRequired && !formData.owner;
@@ -69,43 +80,88 @@ export default function AddItemPage() {
   const preSelectedCategory = searchParams.get("category");
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      const { data } = await supabase.from("categories").select("*");
-      if (data) {
-        setCategories(data);
+    const initData = async () => {
+      // 1. Kategorileri Çek
+      const { data: catData } = await supabase.from("categories").select("*");
+      if (catData) {
+        setCategories(catData);
         if (preSelectedCategory) {
-          // URL'den gelen kategori varsa onu seç
-          const exists = data.find((c) => c.key === preSelectedCategory);
+          const exists = catData.find((c) => c.key === preSelectedCategory);
           if (exists) {
             setFormData((prev) => ({ ...prev, category: preSelectedCategory }));
           }
-        } else if (data.length > 0 && !formData.category) {
-          // Yoksa varsayılan olarak ilkini seç (eğer henüz seçili değilse)
-          setFormData((prev) => ({ ...prev, category: data[0].key }));
+        } else if (catData.length > 0 && !formData.category) {
+          setFormData((prev) => ({ ...prev, category: catData[0].key }));
         }
       }
+
+      // 2. Profilleri Çek
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Kendi Profilim
+      const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).single();
+      const myName = myProfile?.display_name || "Ben";
+      setCurrentUserProfile({ id: user.id, name: myName });
+
+      // Partner Profilim (Couples tablosundan)
+      const { data: coupleData } = await supabase
+        .from("couples")
+        .select("*")
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .maybeSingle();
+
+      const profileList = [{ id: user.id, name: myName }];
+
+      if (coupleData) {
+        const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id;
+        const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).single();
+        const partnerName = partnerProfile?.display_name || "Partner";
+        profileList.push({ id: partnerId, name: partnerName });
+      }
+
+      setProfiles(profileList);
     };
-    fetchCategories();
+
+    initData();
   }, [preSelectedCategory]);
 
   const stopAnalyzing = () => {
     setAnalyzingMethod(null);
   };
 
-  const handleProcessResults = (allBooks: ScannedBook[]) => {
-    const newBooksOnly = allBooks.filter((book) => !book.isExists);
+  const handleProcessResults = async (allBooks: ScannedBook[]) => {
+    // 1. Veritabanındaki mevcut kitapları kontrol et
+    const { data: existingItems } = await supabase
+      .from("items")
+      .select("title")
+      .eq("category", formData.category);
 
-    if (newBooksOnly.length === 0) {
-      if (allBooks.length === 0) {
-        toast.warning("Öğe bulunamadı veya format anlaşılamadı.");
-      } else {
-        toast.success("Listedeki tüm öğeler zaten kayıtlı! 🎉");
+    // Set haline getir (küçük harf ile)
+    const existingTitles = new Set((existingItems || []).map(i => i.title.trim().toLowerCase()));
+
+    // 2. Taranan kitapları işaretle
+    const processedBooks = allBooks.map(book => ({
+      ...book,
+      isExists: existingTitles.has(book.title.trim().toLowerCase())
+    }));
+
+    setFoundBooks(processedBooks);
+
+    // 3. Sadece VERİTABANINDA OLMAYANLARI seçili yap
+    const newIndices = new Set<number>();
+    processedBooks.forEach((book, idx) => {
+      if (!book.isExists) {
+        newIndices.add(idx);
       }
-      return;
+    });
+
+    // Eğer hepsi zaten varsa, yine de modalı aç ama uyarı ver
+    if (newIndices.size === 0) {
+      toast.info("Bu listedeki öğelerin hepsi zaten kayıtlı görünüyor.");
     }
 
-    setFoundBooks(newBooksOnly);
-    setSelectedIndices(new Set(newBooksOnly.map((_, i) => i)));
+    setSelectedIndices(newIndices);
     setShowSelectionModal(true);
   };
 
@@ -188,8 +244,8 @@ export default function AddItemPage() {
     setLoading(true);
 
     // Fonksiyon çalıştığı andaki güncel kategoriye göre zorunluluğu tekrar kontrol et
-    const currentIsOwnerRequired =
-      formData.category === "book" || formData.category === "lego";
+    const selectedCat = categories.find(c => c.key === formData.category);
+    const currentIsOwnerRequired = selectedCat ? (selectedCat as any).is_owner_required : false;
 
     try {
       const {
@@ -202,21 +258,57 @@ export default function AddItemPage() {
         return;
       }
 
-      const booksToInsert = foundBooks
-        .filter((_, index) => selectedIndices.has(index))
-        .map((book) => ({
-          title: book.title,
-          description: book.description,
-          category: formData.category,
-          // EĞER KATEGORİ BOOK/LEGO DEĞİLSE OWNER KESİNLİKLE NULL GİDER
-          owner: currentIsOwnerRequired ? formData.owner : null,
-          status: false,
-          user: user.id, // Kullanıcı ID eklendi
-        }));
+      // 1. Önce bu kategorideki mevcut öğelerimi çek (duplicate kontrolü için)
+      const { data: existingItems } = await supabase
+        .from("items")
+        .select("title")
+        .eq("category", formData.category);
 
-      const { error } = await supabase.from("items").insert(booksToInsert);
-      if (error) throw error;
-      toast.success(`${booksToInsert.length} öğe eklendi! 🎉`);
+      const existingTitles = new Set((existingItems || []).map(i => i.title.toLowerCase()));
+
+      // 2. Eklenecek kitapları hazırla (Duplicate olmayanlar)
+      const booksToInsert: any[] = [];
+      let duplicateCount = 0;
+
+      foundBooks.forEach((book, index) => {
+        if (selectedIndices.has(index)) {
+          if (existingTitles.has(book.title.toLowerCase())) {
+            duplicateCount++;
+          } else {
+            booksToInsert.push({
+              title: book.title,
+              description: book.description,
+              category: formData.category,
+              owner: currentIsOwnerRequired ? formData.owner : null,
+              status: false,
+              status: false,
+              user: user.id,
+              image_urls: book.image_url ? [book.image_url] : null,
+            });
+          }
+        }
+      });
+
+      if (booksToInsert.length === 0 && duplicateCount > 0) {
+        toast.warning("Seçilen tüm öğeler zaten listenizde var!");
+        setLoading(false);
+        return;
+      }
+
+      if (booksToInsert.length > 0) {
+        const { error } = await supabase.from("items").insert(booksToInsert);
+        if (error) throw error;
+      }
+
+      const successMsg = booksToInsert.length > 0 ? `${booksToInsert.length} öğe eklendi!` : "";
+      const skipMsg = duplicateCount > 0 ? `${duplicateCount} tekrar eden öğe atlandı.` : "";
+
+      if (duplicateCount > 0) {
+        toast.info(`${successMsg} ${skipMsg}`);
+      } else {
+        toast.success(`${successMsg} 🎉`);
+      }
+
       setShowSelectionModal(false);
       setFoundBooks([]);
       router.push(`/${formData.category}`);
@@ -240,8 +332,8 @@ export default function AddItemPage() {
     e.preventDefault();
 
     // Fonksiyon çalıştığı andaki kategoriye göre kontrol
-    const currentIsOwnerRequired =
-      formData.category === "book" || formData.category === "lego";
+    const selectedCat = categories.find(c => c.key === formData.category);
+    const currentIsOwnerRequired = selectedCat ? (selectedCat as any).is_owner_required : false;
 
     if (currentIsOwnerRequired && !formData.owner) {
       toast.warn("Lütfen bir sahip seçin.");
@@ -260,17 +352,42 @@ export default function AddItemPage() {
         return;
       }
 
+      // DUPLICATE CONTROL
+      const { data: existingItems } = await supabase
+        .from("items")
+        .select("id")
+        .eq("category", formData.category)
+        .ilike("title", formData.title.trim());
+
+      if (existingItems && existingItems.length > 0) {
+        toast.warning("Bu öğe zaten listenizde var!");
+        setLoading(false);
+        return;
+      }
+
+      // Upload photos if any
+      let imageUrls: string[] = [];
+      if (selectedPhotos.length > 0) {
+        toast.info("Fotoğraflar yükleniyor...");
+        imageUrls = await uploadPhotosToStorage(user.id);
+      }
+
       await supabase.from("items").insert([
         {
-          title: formData.title,
+          title: formData.title.trim(),
           category: formData.category,
           description: formData.description,
-          // EĞER KATEGORİ BOOK/LEGO DEĞİLSE OWNER KESİNLİKLE NULL GİDER
           owner: currentIsOwnerRequired ? formData.owner : null,
-          status: false,
-          user: user.id, // Kullanıcı ID eklendi
+          status: formData.status,
+          user: user.id,
+          image_urls: imageUrls.length > 0 ? imageUrls : null,
         },
       ]);
+
+      // Clear photo state
+      setSelectedPhotos([]);
+      setPhotoPreviews([]);
+
       toast.success("Eklendi!");
       router.push(`/${formData.category}`);
       router.refresh();
@@ -290,9 +407,63 @@ export default function AddItemPage() {
     }
   };
 
+  // Photo upload handlers
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+
+    const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
+    if (files.length > remainingSlots) {
+      toast.warn(`En fazla ${MAX_PHOTOS} fotoğraf yükleyebilirsiniz!`);
+      return;
+    }
+
+    // Generate previews
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setSelectedPhotos(prev => [...prev, ...files]);
+    setPhotoPreviews(prev => [...prev, ...newPreviews]);
+    e.target.value = "";
+  };
+
+  const removePhoto = (index: number) => {
+    URL.revokeObjectURL(photoPreviews[index]); // Cleanup
+    setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadPhotosToStorage = async (userId: string): Promise<string[]> => {
+    if (selectedPhotos.length === 0) return [];
+
+    setUploadingPhotos(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of selectedPhotos) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('item-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('item-images')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(urlData.publicUrl);
+      }
+    } finally {
+      setUploadingPhotos(false);
+    }
+
+    return uploadedUrls;
+  };
+
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg border border-gray-100 relative overflow-hidden">
+    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl border-2 border-pink-100 relative overflow-hidden">
         {/* GLOBAL LOADER */}
         {analyzingMethod !== null && (
           <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
@@ -351,26 +522,51 @@ export default function AddItemPage() {
             <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
               {foundBooks.map((book, idx) => {
                 const isSelected = selectedIndices.has(idx);
+                const isAlreadyAdded = book.isExists;
+
                 return (
                   <div
                     key={idx}
-                    onClick={() => toggleBookSelection(idx)}
-                    className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-all ${isSelected
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:bg-gray-50"
+                    onClick={() => {
+                      if (!isAlreadyAdded) toggleBookSelection(idx);
+                    }}
+                    className={`p-3 rounded-lg border flex items-start gap-3 transition-all ${isAlreadyAdded
+                      ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
+                      : isSelected
+                        ? "border-blue-500 bg-blue-50 cursor-pointer"
+                        : "border-gray-200 hover:bg-gray-50 cursor-pointer"
                       }`}
                   >
                     <div className="mt-1">
-                      {isSelected ? (
+                      {isAlreadyAdded ? (
+                        <div className="w-5 h-5 flex items-center justify-center bg-gray-300 rounded text-white text-[10px] font-bold">✓</div>
+                      ) : isSelected ? (
                         <CheckSquare className="w-5 h-5 text-blue-600" />
                       ) : (
                         <Square className="w-5 h-5 text-gray-300" />
                       )}
                     </div>
+
+                    {/* Image Preview */}
+                    {book.image_url && (
+                      <img
+                        src={book.image_url}
+                        alt={book.title}
+                        className="w-12 h-16 object-cover rounded-md border border-gray-200"
+                      />
+                    )}
+
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800 text-sm">
-                        {book.title}
-                      </h3>
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-semibold text-gray-800 text-sm">
+                          {book.title}
+                        </h3>
+                        {isAlreadyAdded && (
+                          <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                            Zaten Var
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500">
                         {book.description}
                       </p>
@@ -423,10 +619,10 @@ export default function AddItemPage() {
               value={formData.category}
               onChange={(e) => {
                 const selectedCategory = e.target.value;
+                const selectedCatObj = categories.find(c => c.key === selectedCategory);
                 // KATEGORİ DEĞİŞTİĞİNDE:
-                // Eğer yeni kategori Book veya Lego DEĞİLSE, owner state'ini de temizle.
-                const shouldClearOwner =
-                  selectedCategory !== "book" && selectedCategory !== "lego";
+                // Eğer yeni kategori owner gerektirmiyorsa, owner state'ini temizle.
+                const shouldClearOwner = selectedCatObj && !(selectedCatObj as any).is_owner_required;
 
                 setFormData({
                   ...formData,
@@ -464,17 +660,17 @@ export default function AddItemPage() {
                 </span>
               </label>
               <div className="flex gap-4">
-                {owners.map((person) => (
+                {profiles.map((profile) => (
                   <label
-                    key={person}
+                    key={profile.id}
                     className="flex items-center gap-2 cursor-pointer group"
                   >
                     <div className="relative flex items-center justify-center">
                       <input
                         type="radio"
                         name="owner"
-                        value={person}
-                        checked={formData.owner === person}
+                        value={profile.name}
+                        checked={formData.owner === profile.name}
                         onChange={(e) =>
                           setFormData({ ...formData, owner: e.target.value })
                         }
@@ -483,12 +679,12 @@ export default function AddItemPage() {
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <span
-                      className={`${formData.owner === person
+                      className={`${formData.owner === profile.name
                         ? "text-gray-900 font-medium"
                         : "text-gray-600"
                         } group-hover:text-gray-900`}
                     >
-                      {person}
+                      {profile.name}
                     </span>
                   </label>
                 ))}
@@ -603,10 +799,62 @@ export default function AddItemPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
               />
             </div>
+
+            {/* PHOTO UPLOAD SECTION */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fotoğraflar <span className="text-gray-400">({selectedPhotos.length}/{MAX_PHOTOS})</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {/* Photo Previews */}
+                {photoPreviews.map((preview, idx) => (
+                  <div key={idx} className="relative w-16 h-16 group">
+                    <img
+                      src={preview}
+                      alt={`Fotoğraf ${idx + 1}`}
+                      className="w-full h-full object-cover rounded-lg border-2 border-pink-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(idx)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add Photo Button */}
+                {selectedPhotos.length < MAX_PHOTOS && (
+                  <label className="w-16 h-16 border-2 border-dashed border-pink-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 hover:border-pink-400 transition-colors">
+                    <ImagePlus className="w-5 h-5 text-pink-400" />
+                    <span className="text-[10px] text-pink-400 mt-0.5">Ekle</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handlePhotoSelect}
+                    />
+                  </label>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">💕 Anılarınızı fotoğraflarla ölümsüzleştirin</p>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer" onClick={() => setFormData({ ...formData, status: !formData.status })}>
+              <div className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${formData.status ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'}`}>
+                {formData.status && <CheckSquare className="w-4 h-4 text-white" />}
+              </div>
+              <span className="text-sm font-medium text-gray-700 select-none">
+                {formData.status ? "Tamamlandı olarak işaretle" : "Tamamlandı olarak işaretle"}
+              </span>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

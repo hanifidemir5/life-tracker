@@ -10,6 +10,7 @@ export default function SettingsPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<string | null>(null);
+    const [displayName, setDisplayName] = useState("");
     const [partnerId, setPartnerId] = useState("");
     const [currentPartner, setCurrentPartner] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState(false);
@@ -27,12 +28,36 @@ export default function SettingsPage() {
             }
 
             setUserId(user.id);
+            await fetchProfile(user.id);
             await checkExistingPartner(user.id);
             setLoading(false);
         };
 
         checkUser();
     }, [router]);
+
+    const fetchProfile = async (uid: string) => {
+        const { data } = await supabase.from("profiles").select("display_name").eq("id", uid).single();
+        if (data) setDisplayName(data.display_name || "");
+    };
+
+    const handleSaveProfile = async () => {
+        if (!userId) return;
+        setSaving(true);
+        const { error } = await supabase.from("profiles").upsert({
+            id: userId,
+            display_name: displayName,
+            updated_at: new Date().toISOString(),
+        });
+
+        if (error) {
+            toast.error("Profil güncellenemedi.");
+            console.error(error);
+        } else {
+            toast.success("Profil güncellendi! ✅");
+        }
+        setSaving(false);
+    };
 
     const checkExistingPartner = async (myId: string) => {
         // Çift var mı kontrol et
@@ -134,17 +159,17 @@ export default function SettingsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-rose-50 to-red-50">
+                <Loader2 className="w-8 h-8 animate-spin text-rose-600" />
             </div>
         );
     }
 
     return (
-        <main className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
-            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 p-4 flex items-center justify-center">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border-2 border-pink-100 overflow-hidden">
                 {/* Header */}
-                <div className="bg-indigo-600 p-6 text-white text-center relative">
+                <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-6 text-white text-center relative">
                     <button
                         onClick={() => router.push("/")}
                         className="absolute left-6 top-6 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
@@ -159,6 +184,33 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="p-8 space-y-8">
+
+                    {/* --- PROFİL AYARLARI --- */}
+                    <div className="pb-8 border-b border-gray-100">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-indigo-500" />
+                            Profilim
+                        </h2>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Görünen Adınız (Örn: Ali)"
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 placeholder:text-gray-400"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                            />
+                            <button
+                                onClick={handleSaveProfile}
+                                disabled={saving}
+                                className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Kaydet"}
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">
+                            Bu isim, listelerde "Sahibi" olarak görünecektir.
+                        </p>
+                    </div>
 
                     {/* Durum Göstergesi */}
                     {currentPartner ? (
@@ -213,44 +265,46 @@ export default function SettingsPage() {
                         </p>
                     </div>
 
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500 font-medium">VEYA</span>
-                        </div>
-                    </div>
 
                     {/* Partner Kodu Gir */}
                     {!currentPartner && (
-                        <form onSubmit={handleConnect} className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
-                                    Partnerinizin Kodu
-                                </label>
-                                <input
-                                    type="text"
-                                    value={partnerId}
-                                    onChange={(e) => setPartnerId(e.target.value)}
-                                    placeholder="Partnerinizin kodunu buraya yapıştırın..."
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                />
+                        <>
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-gray-200"></div>
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    <span className="px-2 bg-white text-gray-500 font-medium">VEYA</span>
+                                </div>
                             </div>
+                            <form onSubmit={handleConnect} className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
+                                        Partnerinizin Kodu
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={partnerId}
+                                        onChange={(e) => setPartnerId(e.target.value)}
+                                        placeholder="Partnerinizin kodunu buraya yapıştırın..."
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400"
+                                    />
+                                </div>
 
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                {saving ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <UserPlus className="w-5 h-5" />
-                                )}
-                                {saving ? "Bağlanılıyor..." : "Partneri Ekle"}
-                            </button>
-                        </form>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    {saving ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <UserPlus className="w-5 h-5" />
+                                    )}
+                                    {saving ? "Bağlanılıyor..." : "Partneri Ekle"}
+                                </button>
+                            </form>
+                        </>
                     )}
                 </div>
             </div>

@@ -20,6 +20,8 @@ export default function AddCategoryPage() {
     key: "",
     icon_name: "Circle", // Varsayılan ikon
     color_class: "hover:bg-gray-50", // Varsayılan
+    is_owner_required: false, // Yeni alan
+    is_private: false, // Private category field
   });
 
   // Resim Yükleme State'leri
@@ -90,7 +92,9 @@ export default function AddCategoryPage() {
           key: formData.key.toLowerCase().replace(/ /g, "-"),
           icon_name: finalIconName,
           color_class: formData.color_class,
-          user: user.id, // KULLANICI ID'SİNİ EKLEDİK (Column name: user)
+          user: user.id,
+          is_owner_required: formData.is_owner_required, // Yeni alan eklendi
+          is_private: formData.is_private, // Private category field
         },
       ]);
 
@@ -108,8 +112,8 @@ export default function AddCategoryPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-lg border border-gray-100">
+    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 border-pink-100">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Kategori Ekle</h1>
           <button
@@ -290,10 +294,56 @@ export default function AddCategoryPage() {
             </div>
           </div>
 
+
+
+          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <input
+              type="checkbox"
+              id="isOwnerRequired"
+              checked={formData.is_owner_required}
+              onChange={(e) => setFormData({ ...formData, is_owner_required: e.target.checked })}
+              className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
+            />
+            <label htmlFor="isOwnerRequired" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
+              Bu kategorideki öğeler için <strong>sahip</strong> seçilsin mi?
+              <p className="text-xs text-gray-500 font-normal mt-0.5">
+                (Örn: Kitaplar için kimde olduğunu takip etmek isterseniz işaretleyin)
+              </p>
+            </label>
+          </div>
+
+          {/* Private Category Checkbox */}
+          <div className="mt-6 p-4 bg-purple-50 border-2 border-purple-100 rounded-xl">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_private}
+                onChange={(e) =>
+                  setFormData({ ...formData, is_private: e.target.checked })
+                }
+                className="mt-1 w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🔒</span>
+                  <span className="font-semibold text-purple-900">
+                    Gizli Kategori
+                  </span>
+                </div>
+                <p className="text-sm text-purple-700 mt-1">
+                  Bu kategoriyi gizli tut (partnerden gizle)
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  Gizli kategoriler partneriniz tarafından görülemez - sürpriz planlamak için mükemmel! 💝
+                </p>
+              </div>
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -302,8 +352,8 @@ export default function AddCategoryPage() {
             )}
             {loading ? "Kaydediliyor..." : "Kaydet"}
           </button>
-        </form>
-      </div>
-    </main>
+        </form >
+      </div >
+    </main >
   );
 }

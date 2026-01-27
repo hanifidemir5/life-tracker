@@ -11,6 +11,8 @@ import {
   CheckCircle,
   Circle,
   AlertTriangle,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -40,7 +42,14 @@ export default function UpdateItemPage() {
     status: false,
   });
 
-  const owners = ["Fatma", "Hanifi"];
+  // Photo upload state (max 5 photos)
+  const MAX_PHOTOS = 5;
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]); // URLs from database
+  const [newPhotos, setNewPhotos] = useState<File[]>([]); // New photos to upload
+  const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]); // Previews for new photos
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
+
 
   // --- KATEGORİYE GÖRE DURUM METNİ BELİRLEME ---
   const getStatusLabel = (category: string, status: boolean) => {
@@ -71,13 +80,33 @@ export default function UpdateItemPage() {
     }
   };
 
+  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // 1. Kategorileri Çek
         const { data: catData } = await supabase.from("categories").select("*");
         setCategories(catData || []);
 
+        // 2. Profilleri Çek
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).single();
+          const myName = myProfile?.display_name || "Ben";
+          const profileList = [{ id: user.id, name: myName }];
+
+          const { data: coupleData } = await supabase.from("couples").select("*").or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`).maybeSingle();
+          if (coupleData) {
+            const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id;
+            const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).single();
+            if (partnerProfile) profileList.push({ id: partnerId, name: partnerProfile.display_name });
+          }
+          setProfiles(profileList);
+        }
+
+        // 3. Mevcut Ögeyi Çek
         const { data: itemData, error } = await supabase
           .from("items")
           .select("*")
@@ -94,6 +123,10 @@ export default function UpdateItemPage() {
             owner: itemData.owner || "",
             status: itemData.status,
           });
+          // Load existing photos
+          if (itemData.image_urls && Array.isArray(itemData.image_urls)) {
+            setExistingPhotos(itemData.image_urls);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -109,8 +142,10 @@ export default function UpdateItemPage() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isOwnerRequired =
-      formData.category === "book" || formData.category === "lego";
+
+    // Kategorinin zorunluluk durumunu kontrol et
+    const currentCategory = categories.find(c => c.key === formData.category);
+    const isOwnerRequired = currentCategory ? (currentCategory as any).is_owner_required : false;
 
     if (isOwnerRequired && !formData.owner) {
       toast.warn("Lütfen bir sahip seçin.");
@@ -119,6 +154,17 @@ export default function UpdateItemPage() {
 
     setSaving(true);
     try {
+      // Upload new photos if any
+      const { data: { user } } = await supabase.auth.getUser();
+      let uploadedUrls: string[] = [];
+      if (newPhotos.length > 0 && user) {
+        toast.info("Fotoğraflar yükleniyor...");
+        uploadedUrls = await uploadNewPhotos(user.id);
+      }
+
+      // Combine existing + new photos
+      const allPhotoUrls = [...existingPhotos, ...uploadedUrls];
+
       const { error } = await supabase
         .from("items")
         .update({
@@ -127,10 +173,16 @@ export default function UpdateItemPage() {
           description: formData.description,
           owner: isOwnerRequired ? formData.owner : null,
           status: formData.status,
+          image_urls: allPhotoUrls.length > 0 ? allPhotoUrls : null,
         })
         .eq("id", itemId);
 
       if (error) throw error;
+
+      // Clear new photo state
+      setNewPhotos([]);
+      setNewPhotoPreviews([]);
+
       toast.success("Başarıyla güncellendi! 🎉");
       router.back();
       router.refresh();
@@ -157,8 +209,67 @@ export default function UpdateItemPage() {
     }
   };
 
-  const isOwnerRequired =
-    formData.category === "book" || formData.category === "lego";
+  // Photo upload handlers
+  const totalPhotos = existingPhotos.length + newPhotos.length;
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+
+    const remainingSlots = MAX_PHOTOS - totalPhotos;
+    if (files.length > remainingSlots) {
+      toast.warn(`En fazla ${MAX_PHOTOS} fotoğraf yükleyebilirsiniz!`);
+      return;
+    }
+
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setNewPhotos(prev => [...prev, ...files]);
+    setNewPhotoPreviews(prev => [...prev, ...newPreviews]);
+    e.target.value = "";
+  };
+
+  const removeExistingPhoto = (index: number) => {
+    setExistingPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewPhoto = (index: number) => {
+    URL.revokeObjectURL(newPhotoPreviews[index]);
+    setNewPhotos(prev => prev.filter((_, i) => i !== index));
+    setNewPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadNewPhotos = async (userId: string): Promise<string[]> => {
+    if (newPhotos.length === 0) return [];
+
+    setUploadingPhotos(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of newPhotos) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('item-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('item-images')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(urlData.publicUrl);
+      }
+    } finally {
+      setUploadingPhotos(false);
+    }
+
+    return uploadedUrls;
+  };
+
+  const currentCategoryForRender = categories.find(c => c.key === formData.category);
+  const isOwnerRequired = currentCategoryForRender ? (currentCategoryForRender as any).is_owner_required : false;
 
   if (loading) {
     return (
@@ -233,25 +344,22 @@ export default function UpdateItemPage() {
             onClick={() =>
               setFormData({ ...formData, status: !formData.status })
             }
-            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${
-              formData.status
-                ? "bg-green-50 border-green-200"
-                : "bg-gray-50 border-gray-200 hover:border-blue-300"
-            }`}
+            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${formData.status
+              ? "bg-green-50 border-green-200"
+              : "bg-gray-50 border-gray-200 hover:border-blue-300"
+              }`}
           >
             <div className="flex flex-col">
               <span
-                className={`font-semibold ${
-                  formData.status ? "text-green-800" : "text-gray-700"
-                }`}
+                className={`font-semibold ${formData.status ? "text-green-800" : "text-gray-700"
+                  }`}
               >
                 Durum
               </span>
               {/* DİNAMİK METİN BURADA KULLANILIYOR */}
               <span
-                className={`text-xs ${
-                  formData.status ? "text-green-600" : "text-gray-500"
-                }`}
+                className={`text-xs ${formData.status ? "text-green-600" : "text-gray-500"
+                  }`}
               >
                 {getStatusLabel(formData.category, formData.status)}
               </span>
@@ -291,8 +399,8 @@ export default function UpdateItemPage() {
               value={formData.category}
               onChange={(e) => {
                 const newCategory = e.target.value;
-                const shouldClearOwner =
-                  newCategory !== "book" && newCategory !== "lego";
+                const newCatObj = categories.find(c => c.key === newCategory);
+                const shouldClearOwner = newCatObj && !(newCatObj as any).is_owner_required;
                 setFormData({
                   ...formData,
                   category: newCategory,
@@ -312,16 +420,14 @@ export default function UpdateItemPage() {
           {/* OWNER */}
           {isOwnerRequired && (
             <div
-              className={`p-4 rounded-xl border transition-colors ${
-                !formData.owner
-                  ? "bg-red-50 border-red-200"
-                  : "bg-blue-50 border-blue-100"
-              }`}
+              className={`p-4 rounded-xl border transition-colors ${!formData.owner
+                ? "bg-red-50 border-red-200"
+                : "bg-blue-50 border-blue-100"
+                }`}
             >
               <label
-                className={`block text-sm font-medium mb-2 ${
-                  !formData.owner ? "text-red-600" : "text-blue-800"
-                }`}
+                className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
+                  }`}
               >
                 Şu an kimde?{" "}
                 <span className="text-xs font-normal opacity-70">
@@ -329,17 +435,17 @@ export default function UpdateItemPage() {
                 </span>
               </label>
               <div className="flex gap-4">
-                {owners.map((person) => (
+                {profiles.map((profile) => (
                   <label
-                    key={person}
+                    key={profile.id}
                     className="flex items-center gap-2 cursor-pointer group"
                   >
                     <div className="relative flex items-center justify-center">
                       <input
                         type="radio"
                         name="owner"
-                        value={person}
-                        checked={formData.owner === person}
+                        value={profile.name}
+                        checked={formData.owner === profile.name}
                         onChange={(e) =>
                           setFormData({ ...formData, owner: e.target.value })
                         }
@@ -348,13 +454,12 @@ export default function UpdateItemPage() {
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <span
-                      className={`${
-                        formData.owner === person
-                          ? "text-gray-900 font-medium"
-                          : "text-gray-600"
-                      } group-hover:text-gray-900`}
+                      className={`${formData.owner === profile.name
+                        ? "text-gray-900 font-medium"
+                        : "text-gray-600"
+                        } group-hover:text-gray-900`}
                     >
-                      {person}
+                      {profile.name}
                     </span>
                   </label>
                 ))}
@@ -375,6 +480,67 @@ export default function UpdateItemPage() {
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
             />
+          </div>
+
+          {/* PHOTO SECTION */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fotoğraflar <span className="text-gray-400">({totalPhotos}/{MAX_PHOTOS})</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {/* Existing Photos */}
+              {existingPhotos.map((url, idx) => (
+                <div key={`existing-${idx}`} className="relative w-16 h-16 group">
+                  <img
+                    src={url}
+                    alt={`Fotoğraf ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-lg border-2 border-blue-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeExistingPhoto(idx)}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+
+              {/* New Photos */}
+              {newPhotoPreviews.map((preview, idx) => (
+                <div key={`new-${idx}`} className="relative w-16 h-16 group">
+                  <img
+                    src={preview}
+                    alt={`Yeni Fotoğraf ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-lg border-2 border-pink-300"
+                  />
+                  <div className="absolute top-0 left-0 bg-pink-500 text-white text-[8px] px-1 rounded-br">YENİ</div>
+                  <button
+                    type="button"
+                    onClick={() => removeNewPhoto(idx)}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add Photo Button */}
+              {totalPhotos < MAX_PHOTOS && (
+                <label className="w-16 h-16 border-2 border-dashed border-blue-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                  <ImagePlus className="w-5 h-5 text-blue-400" />
+                  <span className="text-[10px] text-blue-400 mt-0.5">Ekle</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handlePhotoSelect}
+                  />
+                </label>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">💕 Anılarınızı fotoğraflarla ölümsüzleştirin</p>
           </div>
 
           {/* BUTONLAR */}
