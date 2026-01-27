@@ -281,7 +281,6 @@ export default function AddItemPage() {
               category: formData.category,
               owner: currentIsOwnerRequired ? formData.owner : null,
               status: false,
-              status: false,
               user: user.id,
               image_urls: book.image_url ? [book.image_url] : null,
             });
