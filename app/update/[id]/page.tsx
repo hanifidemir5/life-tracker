@@ -15,6 +15,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 
 type Category = {
   id: number;
@@ -26,6 +28,8 @@ export default function UpdateItemPage() {
   const router = useRouter();
   const params = useParams();
   const itemId = params.id;
+  const { t } = useLanguage();
+  const { colors, isPaired } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,6 +44,7 @@ export default function UpdateItemPage() {
     description: "",
     owner: "",
     status: false,
+    created_at: "",
   });
 
   // Photo upload state (max 5 photos)
@@ -52,30 +57,31 @@ export default function UpdateItemPage() {
 
 
   // --- KATEGORİYE GÖRE DURUM METNİ BELİRLEME ---
+  // --- KATEGORİYE GÖRE DURUM METNİ BELİRLEME ---
   const getStatusLabel = (category: string, status: boolean) => {
     if (status) {
       // Durum: TRUE (Tamamlanmış)
       switch (category) {
         case "book":
-          return "Okundu";
+          return t('statusRead');
         case "movie":
-          return "İzlendi";
+          return t('statusWatched');
         case "lego":
-          return "Tamamlandı";
+          return t('statusCompleted');
         default:
-          return "Tamamlandı"; // Genel
+          return t('statusCompleted'); // General
       }
     } else {
       // Durum: FALSE (Bekliyor)
       switch (category) {
         case "book":
-          return "Okunacak";
+          return t('statusToRead');
         case "movie":
-          return "İzlenecek";
+          return t('statusToWatch');
         case "lego":
-          return "Yapılacak";
+          return t('statusToDo');
         default:
-          return "Bekliyor"; // Genel
+          return t('statusPending'); // General
       }
     }
   };
@@ -94,7 +100,7 @@ export default function UpdateItemPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).single();
-          const myName = myProfile?.display_name || "Ben";
+          const myName = myProfile?.display_name || "Me";
           const profileList = [{ id: user.id, name: myName }];
 
           const { data: coupleData } = await supabase.from("couples").select("*").or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`).maybeSingle();
@@ -122,6 +128,7 @@ export default function UpdateItemPage() {
             description: itemData.description || "",
             owner: itemData.owner || "",
             status: itemData.status,
+            created_at: itemData.created_at ? itemData.created_at.split('T')[0] : "",
           });
           // Load existing photos
           if (itemData.image_urls && Array.isArray(itemData.image_urls)) {
@@ -130,7 +137,7 @@ export default function UpdateItemPage() {
         }
       } catch (error) {
         console.error(error);
-        toast.error("Hata oluştu.");
+        toast.error(t('error'));
         router.push("/");
       } finally {
         setLoading(false);
@@ -148,7 +155,7 @@ export default function UpdateItemPage() {
     const isOwnerRequired = currentCategory ? (currentCategory as any).is_owner_required : false;
 
     if (isOwnerRequired && !formData.owner) {
-      toast.warn("Lütfen bir sahip seçin.");
+      toast.warn(t('pleaseSelectOwner'));
       return;
     }
 
@@ -158,7 +165,7 @@ export default function UpdateItemPage() {
       const { data: { user } } = await supabase.auth.getUser();
       let uploadedUrls: string[] = [];
       if (newPhotos.length > 0 && user) {
-        toast.info("Fotoğraflar yükleniyor...");
+        toast.info(t('uploadingPhotos'));
         uploadedUrls = await uploadNewPhotos(user.id);
       }
 
@@ -174,6 +181,7 @@ export default function UpdateItemPage() {
           owner: isOwnerRequired ? formData.owner : null,
           status: formData.status,
           image_urls: allPhotoUrls.length > 0 ? allPhotoUrls : null,
+          created_at: formData.created_at ? new Date(formData.created_at).toISOString() : undefined,
         })
         .eq("id", itemId);
 
@@ -183,11 +191,11 @@ export default function UpdateItemPage() {
       setNewPhotos([]);
       setNewPhotoPreviews([]);
 
-      toast.success("Başarıyla güncellendi! 🎉");
+      toast.success(t('updateSuccess'));
       router.back();
       router.refresh();
     } catch (error) {
-      toast.error("Güncelleme başarısız.");
+      toast.error(t('updateFailed'));
     } finally {
       setSaving(false);
     }
@@ -198,11 +206,11 @@ export default function UpdateItemPage() {
     try {
       const { error } = await supabase.from("items").delete().eq("id", itemId);
       if (error) throw error;
-      toast.info("Öğe silindi. 🗑️");
+      toast.info(t('itemDeleted'));
       router.back();
       router.refresh();
     } catch (error) {
-      toast.error("Silme işlemi başarısız.");
+      toast.error(t('deletionFailed'));
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
@@ -218,7 +226,7 @@ export default function UpdateItemPage() {
 
     const remainingSlots = MAX_PHOTOS - totalPhotos;
     if (files.length > remainingSlots) {
-      toast.warn(`En fazla ${MAX_PHOTOS} fotoğraf yükleyebilirsiniz!`);
+      toast.warn(t('photoLimit'));
       return;
     }
 
@@ -290,17 +298,17 @@ export default function UpdateItemPage() {
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Emin misin?
+                {t('deleteItemConfirmTitle')}
               </h3>
               <p className="text-gray-500 mb-6 text-sm">
-                Bu öğeyi silmek üzeresin. Bu işlem geri alınamaz.
+                {t('deleteItemConfirmMessage')}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                 >
-                  Vazgeç
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
@@ -310,7 +318,7 @@ export default function UpdateItemPage() {
                   {deleting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    "Evet, Sil"
+                    t('yesDelete')
                   )}
                 </button>
               </div>
@@ -327,12 +335,12 @@ export default function UpdateItemPage() {
             >
               <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">Düzenle</h1>
+            <h1 className="text-2xl font-bold text-gray-800">{t('edit')}</h1>
           </div>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
-            title="Sil"
+            title={t('deleteItem')}
           >
             <Trash2 className="w-6 h-6" />
           </button>
@@ -354,7 +362,7 @@ export default function UpdateItemPage() {
                 className={`font-semibold ${formData.status ? "text-green-800" : "text-gray-700"
                   }`}
               >
-                Durum
+                {t('status')}
               </span>
               {/* DİNAMİK METİN BURADA KULLANILIYOR */}
               <span
@@ -377,7 +385,7 @@ export default function UpdateItemPage() {
           {/* BAŞLIK */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Başlık
+              {t('itemName')}
             </label>
             <input
               required
@@ -393,7 +401,7 @@ export default function UpdateItemPage() {
           {/* KATEGORİ */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kategori
+              {t('category')}
             </label>
             <select
               value={formData.category}
@@ -417,6 +425,21 @@ export default function UpdateItemPage() {
             </select>
           </div>
 
+          {/* DATE PICKER */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('itemDate')}
+            </label>
+            <input
+              type="date"
+              value={formData.created_at}
+              onChange={(e) =>
+                setFormData({ ...formData, created_at: e.target.value })
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
           {/* OWNER */}
           {isOwnerRequired && (
             <div
@@ -429,9 +452,9 @@ export default function UpdateItemPage() {
                 className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
                   }`}
               >
-                Şu an kimde?{" "}
+                Who has it now?{" "}
                 <span className="text-xs font-normal opacity-70">
-                  (Zorunlu)
+                  (Required)
                 </span>
               </label>
               <div className="flex gap-4">
@@ -470,7 +493,7 @@ export default function UpdateItemPage() {
           {/* NOTLAR */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notlar
+              {t('notes')}
             </label>
             <textarea
               rows={3}
@@ -485,7 +508,7 @@ export default function UpdateItemPage() {
           {/* PHOTO SECTION */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Fotoğraflar <span className="text-gray-400">({totalPhotos}/{MAX_PHOTOS})</span>
+              {t('uploadPhotos')} <span className="text-gray-400">({totalPhotos}/{MAX_PHOTOS})</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {/* Existing Photos */}
@@ -493,7 +516,7 @@ export default function UpdateItemPage() {
                 <div key={`existing-${idx}`} className="relative w-16 h-16 group">
                   <img
                     src={url}
-                    alt={`Fotoğraf ${idx + 1}`}
+                    alt={`Photo ${idx + 1}`}
                     className="w-full h-full object-cover rounded-lg border-2 border-blue-200"
                   />
                   <button
@@ -511,10 +534,10 @@ export default function UpdateItemPage() {
                 <div key={`new-${idx}`} className="relative w-16 h-16 group">
                   <img
                     src={preview}
-                    alt={`Yeni Fotoğraf ${idx + 1}`}
+                    alt={`New Photo ${idx + 1}`}
                     className="w-full h-full object-cover rounded-lg border-2 border-pink-300"
                   />
-                  <div className="absolute top-0 left-0 bg-pink-500 text-white text-[8px] px-1 rounded-br">YENİ</div>
+                  <div className="absolute top-0 left-0 bg-pink-500 text-white text-[8px] px-1 rounded-br">NEW</div>
                   <button
                     type="button"
                     onClick={() => removeNewPhoto(idx)}
@@ -529,7 +552,7 @@ export default function UpdateItemPage() {
               {totalPhotos < MAX_PHOTOS && (
                 <label className="w-16 h-16 border-2 border-dashed border-blue-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors">
                   <ImagePlus className="w-5 h-5 text-blue-400" />
-                  <span className="text-[10px] text-blue-400 mt-0.5">Ekle</span>
+                  <span className="text-[10px] text-blue-400 mt-0.5">{t('addPhoto')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -540,7 +563,7 @@ export default function UpdateItemPage() {
                 </label>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">💕 Anılarınızı fotoğraflarla ölümsüzleştirin</p>
+            <p className="text-xs text-gray-400 mt-1">{t('immortalize')}</p>
           </div>
 
           {/* BUTONLAR */}
@@ -550,7 +573,7 @@ export default function UpdateItemPage() {
               onClick={() => router.back()}
               className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
             >
-              İptal
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -562,7 +585,7 @@ export default function UpdateItemPage() {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-              {saving ? "Kaydediliyor..." : "Güncelle"}
+              {saving ? t('saving') : t('update')}
             </button>
           </div>
         </form>

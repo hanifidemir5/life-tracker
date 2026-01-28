@@ -6,6 +6,9 @@ import { supabase } from "@/app/lib/supebaseClient";
 import { Save, X, Loader2, Trash2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { TranslationKey } from "@/app/lib/translations";
 
 export default function EditCategoryPage() {
   const router = useRouter();
@@ -15,6 +18,8 @@ export default function EditCategoryPage() {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const { t } = useLanguage();
+  const { colors, isPaired } = useTheme();
 
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
@@ -41,7 +46,7 @@ export default function EditCategoryPage() {
         .single();
 
       if (error) {
-        toast.error("Kategori bulunamadı!");
+        toast.error(t('error'));
         router.push("/");
       } else {
         setFormData(data);
@@ -106,7 +111,7 @@ export default function EditCategoryPage() {
           finalIconName = imagePreview;
         } else {
           // Ne dosya var ne preview -> Hata veya uyarı
-          throw new Error("Lütfen bir resim seçin veya İkon tabını kullanın.");
+          throw new Error(t('partnerCodeEmpty'));
         }
       }
 
@@ -126,9 +131,9 @@ export default function EditCategoryPage() {
 
     await toast
       .promise(updateOperation(), {
-        pending: "Güncelleniyor...",
-        success: "Kategori güncellendi! 🎉",
-        error: "Hata oluştu.",
+        pending: t('saving'),
+        success: t('profileUpdated'),
+        error: t('error'),
       })
       .then(() => {
         router.push("/");
@@ -158,16 +163,16 @@ export default function EditCategoryPage() {
       if (error) throw error;
 
       if (count === 0) {
-        toast.error("Kategori silinemedi - yetkiniz olmayabilir");
+        toast.error(t('error'));
         return;
       }
 
-      toast.success("Kategori ve içerik silindi 👋");
+      toast.success(t('success'));
       router.push("/");
       router.refresh();
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error("Silinirken bir hata oluştu.");
+      toast.error(t('error'));
     } finally {
       setLoading(false);
     }
@@ -175,16 +180,16 @@ export default function EditCategoryPage() {
 
   if (dataLoading)
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-rose-50 to-red-50">
-        <Loader2 className="animate-spin text-rose-500 w-8 h-8" />
+      <div className={`h-screen flex items-center justify-center ${colors.pageBg}`}>
+        <Loader2 className={`animate-spin ${isPaired ? 'text-rose-500' : 'text-blue-500'} w-8 h-8`} />
       </div>
     );
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 border-pink-100">
+    <main className={`min-h-screen ${colors.pageBg} flex items-center justify-center p-4`}>
+      <div className={`bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 ${isPaired ? 'border-pink-100' : 'border-slate-100'}`}>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Kategori Düzenle</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('editCategory')}</h1>
           <button
             onClick={() => router.back()}
             className="text-gray-400 hover:text-gray-600"
@@ -197,7 +202,7 @@ export default function EditCategoryPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Adı
+                {t('categoryName')}
               </label>
               <input
                 required
@@ -211,7 +216,7 @@ export default function EditCategoryPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Kodu (Değiştirilemez)
+                {t('codeFixed')}
               </label>
               <input
                 disabled
@@ -225,7 +230,7 @@ export default function EditCategoryPage() {
           {/* TABLARI SEÇME (İkon Listesi vs Resim Yükle) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Görünüm Seçimi
+              {t('appearance')}
             </label>
             <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
               <button
@@ -236,7 +241,7 @@ export default function EditCategoryPage() {
                   : "text-gray-500 hover:text-gray-700"
                   }`}
               >
-                İkon Listesi
+                {t('iconList')}
               </button>
               <button
                 type="button"
@@ -246,7 +251,7 @@ export default function EditCategoryPage() {
                   : "text-gray-500 hover:text-gray-700"
                   }`}
               >
-                Resim Yükle
+                {t('uploadImage')}
               </button>
             </div>
 
@@ -302,7 +307,7 @@ export default function EditCategoryPage() {
                 {!imagePreview && (
                   <>
                     <p className="text-sm text-gray-600 mb-1">
-                      Bir resim yükleyin
+                      {t('uploadNote')}
                     </p>
                     <p className="text-xs text-gray-400 mb-4">
                       PNG, JPG veya GIF (Max 2MB)
@@ -322,7 +327,7 @@ export default function EditCategoryPage() {
                     htmlFor="icon-upload"
                     className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all shadow-sm"
                   >
-                    Dosya Seç/Değiştir
+                    {t('selectFile')}
                   </label>
                 )}
               </div>
@@ -332,7 +337,7 @@ export default function EditCategoryPage() {
           {/* RENK SEÇİMİ */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Renk Teması
+              {t('colorTheme')}
             </label>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {colorOptions.map((color) => (
@@ -351,7 +356,7 @@ export default function EditCategoryPage() {
                   <div
                     className={`w-3 h-3 rounded-full ${color.dotColor}`}
                   ></div>
-                  <span className="text-sm">{color.name}</span>
+                  <span className="text-sm">{t(color.name as TranslationKey)}</span>
                 </div>
               ))}
             </div>
@@ -366,9 +371,9 @@ export default function EditCategoryPage() {
               className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
             />
             <label htmlFor="isOwnerRequired" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
-              Bu kategorideki öğeler için <strong>sahip</strong> seçilsin mi?
+              {t('ownerRequiredQuery')}
               <p className="text-xs text-gray-500 font-normal mt-0.5">
-                (Örn: Kitaplar için kimde olduğunu takip etmek isterseniz işaretleyin)
+                {t('ownerRequiredHint')}
               </p>
             </label>
           </div>
@@ -384,7 +389,7 @@ export default function EditCategoryPage() {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-              {loading ? "Güncelleniyor..." : "Değişiklikleri Kaydet"}
+              {loading ? t('saving') : t('saveChanges')}
             </button>
 
             {/* SİLME BUTONU */}
@@ -395,7 +400,7 @@ export default function EditCategoryPage() {
               className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 border border-red-200 transition-colors"
             >
               <Trash2 className="w-5 h-5" />
-              Kategoriyi Sil
+              {t('deleteCategory')}
             </button>
           </div>
 
@@ -403,9 +408,9 @@ export default function EditCategoryPage() {
           {showDeleteModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
-                <h3 className="text-xl font-bold text-red-600 mb-3">⚠️ Dikkat!</h3>
+                <h3 className="text-xl font-bold text-red-600 mb-3">{t('deleteCategoryConfirmTitle')}</h3>
                 <p className="text-gray-700 mb-4">
-                  Bu kategoriyi silersen içindeki <strong>TÜM EŞYALAR</strong> da silinecek. Emin misin?
+                  {t('deleteCategoryConfirmMessage')}
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -413,14 +418,14 @@ export default function EditCategoryPage() {
                     onClick={() => setShowDeleteModal(false)}
                     className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold text-gray-600"
                   >
-                    İptal
+                    {t('cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleDelete}
                     className="flex-1 py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold"
                   >
-                    Evet, Sil
+                    {t('yesDelete')}
                   </button>
                 </div>
               </div>

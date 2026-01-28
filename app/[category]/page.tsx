@@ -31,6 +31,7 @@ type Item = {
   status: boolean;
   owner?: string;
   image_urls?: string[];
+  created_at?: string;
 };
 
 type Category = {
@@ -343,6 +344,13 @@ export default function CategoryPage() {
                           </>
                         )}
                       </span>
+
+                      {/* Date Display */}
+                      {item.created_at && (
+                        <span className="text-sm text-gray-500">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                      )}
 
                       {/* Açıklama */}
                       {item.description && (

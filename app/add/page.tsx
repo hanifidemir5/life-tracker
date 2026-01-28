@@ -18,6 +18,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 
 type Category = {
   id: number;
@@ -37,6 +39,8 @@ type AnalysisMethod = "camera" | "text" | "csv" | null;
 export default function AddItemPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
+  const { colors, isPaired } = useTheme();
   const [analyzingMethod, setAnalyzingMethod] = useState<AnalysisMethod>(null);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -57,6 +61,7 @@ export default function AddItemPage() {
     description: "",
     owner: "",
     status: false,
+    created_at: new Date().toISOString().split('T')[0], // Default to today (YYYY-MM-DD)
   });
 
   // Photo upload state (max 5 photos)
@@ -101,7 +106,7 @@ export default function AddItemPage() {
 
       // Kendi Profilim
       const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).single();
-      const myName = myProfile?.display_name || "Ben";
+      const myName = myProfile?.display_name || "Me";
       setCurrentUserProfile({ id: user.id, name: myName });
 
       // Partner Profilim (Couples tablosundan)
@@ -157,9 +162,7 @@ export default function AddItemPage() {
     });
 
     // Eğer hepsi zaten varsa, yine de modalı aç ama uyarı ver
-    if (newIndices.size === 0) {
-      toast.info("Bu listedeki öğelerin hepsi zaten kayıtlı görünüyor.");
-    }
+    toast.info("All items in this list seem to be already registered.");
 
     setSelectedIndices(newIndices);
     setShowSelectionModal(true);
@@ -174,7 +177,7 @@ export default function AddItemPage() {
     formDataUpload.append("image", file);
 
     try {
-      toast.info("Görsel analiz ediliyor... 🤖", { autoClose: 3000 });
+      toast.info("Analyzing image... 🤖", { autoClose: 3000 });
       const response = await fetch("/api/scan-books", {
         method: "POST",
         body: formDataUpload,
@@ -185,7 +188,7 @@ export default function AddItemPage() {
       handleProcessResults(data.books);
     } catch (error) {
       console.error(error);
-      toast.error("Hata oluştu.");
+      toast.error("An error occurred.");
     } finally {
       stopAnalyzing();
       e.target.value = "";
@@ -195,7 +198,7 @@ export default function AddItemPage() {
   // --- 2. LİSTE (METİN) ---
   const handleProcessList = async () => {
     if (!listText.trim()) {
-      toast.warn("Lütfen bir liste yapıştırın.");
+      toast.warn("Please paste a list.");
       return;
     }
     setShowTextModal(false);
@@ -220,7 +223,7 @@ export default function AddItemPage() {
   const processTextContent = async (text: string, method: AnalysisMethod) => {
     setAnalyzingMethod(method);
     try {
-      toast.info("Liste işleniyor... 🤖", { autoClose: 3000 });
+      toast.info("Processing list... 🤖", { autoClose: 3000 });
       const response = await fetch("/api/process-list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -232,7 +235,7 @@ export default function AddItemPage() {
       handleProcessResults(data.books);
     } catch (error) {
       console.error(error);
-      toast.error("İşlenemedi.");
+      toast.error("Processing failed.");
     } finally {
       stopAnalyzing();
     }
@@ -253,7 +256,7 @@ export default function AddItemPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error("Oturum açmanız gerekiyor.");
+        toast.error("You need to log in.");
         setLoading(false);
         return;
       }
@@ -289,7 +292,7 @@ export default function AddItemPage() {
       });
 
       if (booksToInsert.length === 0 && duplicateCount > 0) {
-        toast.warning("Seçilen tüm öğeler zaten listenizde var!");
+        toast.warning("All selected items are already in your list!");
         setLoading(false);
         return;
       }
@@ -299,8 +302,8 @@ export default function AddItemPage() {
         if (error) throw error;
       }
 
-      const successMsg = booksToInsert.length > 0 ? `${booksToInsert.length} öğe eklendi!` : "";
-      const skipMsg = duplicateCount > 0 ? `${duplicateCount} tekrar eden öğe atlandı.` : "";
+      const successMsg = booksToInsert.length > 0 ? `${booksToInsert.length} items added!` : "";
+      const skipMsg = duplicateCount > 0 ? `${duplicateCount} duplicate items skipped.` : "";
 
       if (duplicateCount > 0) {
         toast.info(`${successMsg} ${skipMsg}`);
@@ -313,7 +316,7 @@ export default function AddItemPage() {
       router.push(`/${formData.category}`);
       router.refresh();
     } catch (error) {
-      toast.error("Kaydetme hatası.");
+      toast.error("Save error.");
     } finally {
       setLoading(false);
     }
@@ -335,7 +338,7 @@ export default function AddItemPage() {
     const currentIsOwnerRequired = selectedCat ? (selectedCat as any).is_owner_required : false;
 
     if (currentIsOwnerRequired && !formData.owner) {
-      toast.warn("Lütfen bir sahip seçin.");
+      toast.warn(t('pleaseSelectOwner'));
       return;
     }
     setLoading(true);
@@ -346,7 +349,7 @@ export default function AddItemPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error("Oturum açmanız gerekiyor.");
+        toast.error("You need to log in.");
         setLoading(false);
         return;
       }
@@ -359,7 +362,7 @@ export default function AddItemPage() {
         .ilike("title", formData.title.trim());
 
       if (existingItems && existingItems.length > 0) {
-        toast.warning("Bu öğe zaten listenizde var!");
+        toast.warning("This item is already in your list!");
         setLoading(false);
         return;
       }
@@ -367,7 +370,7 @@ export default function AddItemPage() {
       // Upload photos if any
       let imageUrls: string[] = [];
       if (selectedPhotos.length > 0) {
-        toast.info("Fotoğraflar yükleniyor...");
+        toast.info(t('uploadingPhotos'));
         imageUrls = await uploadPhotosToStorage(user.id);
       }
 
@@ -380,6 +383,7 @@ export default function AddItemPage() {
           status: formData.status,
           user: user.id,
           image_urls: imageUrls.length > 0 ? imageUrls : null,
+          created_at: formData.created_at ? new Date(formData.created_at).toISOString() : new Date().toISOString(),
         },
       ]);
 
@@ -387,11 +391,11 @@ export default function AddItemPage() {
       setSelectedPhotos([]);
       setPhotoPreviews([]);
 
-      toast.success("Eklendi!");
+      toast.success("Added!");
       router.push(`/${formData.category}`);
       router.refresh();
     } catch {
-      toast.error("Hata");
+      toast.error("Error");
     } finally {
       setLoading(false);
     }
@@ -400,7 +404,7 @@ export default function AddItemPage() {
   const handleSpecialActionClick = (e: any, action: () => void) => {
     if (isActionDisabled) {
       e.preventDefault();
-      toast.warn("Bu kategori için lütfen önce 'Kimin?' olduğunu seçin!");
+      toast.warn("Please select 'Owner' for this category first!");
     } else {
       action();
     }
@@ -413,7 +417,7 @@ export default function AddItemPage() {
 
     const remainingSlots = MAX_PHOTOS - selectedPhotos.length;
     if (files.length > remainingSlots) {
-      toast.warn(`En fazla ${MAX_PHOTOS} fotoğraf yükleyebilirsiniz!`);
+      toast.warn(t('photoLimit'));
       return;
     }
 
@@ -468,12 +472,12 @@ export default function AddItemPage() {
           <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
             <Sparkles className="w-12 h-12 text-purple-600 animate-pulse mb-4" />
             <h2 className="text-xl font-bold text-gray-800">
-              Yapay Zeka Çalışıyor
+              AI is Working
             </h2>
             <p className="text-gray-500 mt-2">
-              {analyzingMethod === "camera" && "Görsel taranıyor..."}
-              {analyzingMethod === "csv" && "CSV dosyası okunuyor..."}
-              {analyzingMethod === "text" && "Liste analiz ediliyor..."}
+              {analyzingMethod === "camera" && "Scanning image..."}
+              {analyzingMethod === "csv" && "Reading CSV file..."}
+              {analyzingMethod === "text" && "Analyzing list..."}
             </p>
           </div>
         )}
@@ -483,7 +487,7 @@ export default function AddItemPage() {
           <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-800">
-                Listeyi Yapıştır
+                Paste List
               </h2>
               <button onClick={() => setShowTextModal(false)}>
                 <X className="w-6 h-6 text-gray-400" />
@@ -492,24 +496,24 @@ export default function AddItemPage() {
             <textarea
               value={listText}
               onChange={(e) => setListText(e.target.value)}
-              placeholder="Örnek:&#10;1. Dune - Frank Herbert&#10;2. 1984&#10;3. Simyacı"
+              placeholder="Example:&#10;1. Dune - Frank Herbert&#10;2. 1984&#10;3. The Alchemist"
               className="flex-1 w-full border text-gray-800 border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none mb-4 text-sm"
             />
             <button
               onClick={handleProcessList}
               className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 flex items-center justify-center gap-2"
             >
-              Analiz Et <ArrowRight className="w-5 h-5" />
+              Analyze <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         )}
 
-        {/* --- SEÇİM MODALI --- */}
+        {/* --- SELECTION MODAL --- */}
         {showSelectionModal && (
           <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
             <div className="flex justify-between items-center mb-4 border-b pb-4">
               <h2 className="text-lg font-bold text-gray-800">
-                Eklenecek Öğeler ({foundBooks.length})
+                Items to Add ({foundBooks.length})
               </h2>
               <button
                 onClick={() => setShowSelectionModal(false)}
@@ -562,7 +566,7 @@ export default function AddItemPage() {
                         </h3>
                         {isAlreadyAdded && (
                           <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                            Zaten Var
+                            Already Exists
                           </span>
                         )}
                       </div>
@@ -579,7 +583,7 @@ export default function AddItemPage() {
                 onClick={() => setShowSelectionModal(false)}
                 className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium"
               >
-                İptal
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSaveSelectedBooks}
@@ -591,7 +595,7 @@ export default function AddItemPage() {
                 ) : (
                   <Save className="w-5 h-5" />
                 )}
-                Kaydet ({selectedIndices.size})
+                Save ({selectedIndices.size})
               </button>
             </div>
           </div>
@@ -599,7 +603,7 @@ export default function AddItemPage() {
 
         {/* --- HEADER --- */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Yeni Ekle</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('addItem')}</h1>
           <button
             onClick={() => router.back()}
             className="text-gray-400 hover:text-gray-600"
@@ -609,10 +613,10 @@ export default function AddItemPage() {
         </div>
 
         <div className="space-y-6 text-black">
-          {/* KATEGORİ SEÇİMİ */}
+          {/* CATEGORY SELECTION */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kategori
+              {t('category')}
             </label>
             <select
               value={formData.category}
@@ -641,6 +645,21 @@ export default function AddItemPage() {
             </select>
           </div>
 
+          {/* DATE PICKER */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('itemDate')}
+            </label>
+            <input
+              type="date"
+              value={formData.created_at}
+              onChange={(e) =>
+                setFormData({ ...formData, created_at: e.target.value })
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+
           {/* OWNER UI (SADECE KİTAP/LEGO İSE GÖZÜKÜR) */}
           {isOwnerRequired && (
             <div
@@ -653,9 +672,9 @@ export default function AddItemPage() {
                 className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
                   }`}
               >
-                Şu an kimde?{" "}
+                Who has it now?{" "}
                 <span className="text-xs font-normal opacity-70">
-                  (Zorunlu)
+                  (Required)
                 </span>
               </label>
               <div className="flex gap-4">
@@ -707,7 +726,7 @@ export default function AddItemPage() {
               ) : (
                 <Camera className="w-5 h-5" />
               )}
-              <span className="text-xs font-bold">Kamera</span>
+              <span className="text-xs font-bold">Camera</span>
               <input
                 type="file"
                 accept="image/*"
@@ -718,7 +737,7 @@ export default function AddItemPage() {
               />
             </label>
 
-            {/* 2. LİSTE BUTONU */}
+            {/* 2. LIST BUTTON */}
             <button
               onClick={(e) =>
                 handleSpecialActionClick(e, () => setShowTextModal(true))
@@ -734,10 +753,10 @@ export default function AddItemPage() {
               ) : (
                 <ClipboardList className="w-5 h-5" />
               )}
-              <span className="text-xs font-bold">Yapıştır</span>
+              <span className="text-xs font-bold">Paste</span>
             </button>
 
-            {/* 3. CSV BUTONU */}
+            {/* 3. CSV BUTTON */}
             <label
               onClick={(e) => handleSpecialActionClick(e, () => { })}
               className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
@@ -764,7 +783,7 @@ export default function AddItemPage() {
           <div className="flex items-center gap-4 my-2">
             <div className="h-px bg-gray-200 flex-1"></div>
             <span className="text-xs text-gray-400 font-medium">
-              VEYA ELLE GİR
+              OR ENTER MANUALLY
             </span>
             <div className="h-px bg-gray-200 flex-1"></div>
           </div>
@@ -773,7 +792,7 @@ export default function AddItemPage() {
           <form onSubmit={handleSubmit} className="space-y-5 text-black">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Başlık
+                {t('itemName')}
               </label>
               <input
                 required
@@ -787,7 +806,7 @@ export default function AddItemPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notlar
+                {t('notes')}
               </label>
               <textarea
                 rows={2}
@@ -802,7 +821,7 @@ export default function AddItemPage() {
             {/* PHOTO UPLOAD SECTION */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fotoğraflar <span className="text-gray-400">({selectedPhotos.length}/{MAX_PHOTOS})</span>
+                {t('uploadPhotos')} <span className="text-gray-400">({selectedPhotos.length}/{MAX_PHOTOS})</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {/* Photo Previews */}
@@ -810,7 +829,7 @@ export default function AddItemPage() {
                   <div key={idx} className="relative w-16 h-16 group">
                     <img
                       src={preview}
-                      alt={`Fotoğraf ${idx + 1}`}
+                      alt={`Photo ${idx + 1}`}
                       className="w-full h-full object-cover rounded-lg border-2 border-pink-200"
                     />
                     <button
@@ -827,7 +846,7 @@ export default function AddItemPage() {
                 {selectedPhotos.length < MAX_PHOTOS && (
                   <label className="w-16 h-16 border-2 border-dashed border-pink-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 hover:border-pink-400 transition-colors">
                     <ImagePlus className="w-5 h-5 text-pink-400" />
-                    <span className="text-[10px] text-pink-400 mt-0.5">Ekle</span>
+                    <span className="text-[10px] text-pink-400 mt-0.5">{t('addPhoto')}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -838,7 +857,7 @@ export default function AddItemPage() {
                   </label>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">💕 Anılarınızı fotoğraflarla ölümsüzleştirin</p>
+              <p className="text-xs text-gray-400 mt-1">{t('immortalize')}</p>
             </div>
 
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer" onClick={() => setFormData({ ...formData, status: !formData.status })}>
@@ -846,7 +865,7 @@ export default function AddItemPage() {
                 {formData.status && <CheckSquare className="w-4 h-4 text-white" />}
               </div>
               <span className="text-sm font-medium text-gray-700 select-none">
-                {formData.status ? "Tamamlandı olarak işaretle" : "Tamamlandı olarak işaretle"}
+                {t('markAsCompleted')}
               </span>
             </div>
 
@@ -860,7 +879,7 @@ export default function AddItemPage() {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-              {loading ? "Kaydediliyor..." : "Listeye Ekle"}
+              {loading ? t('saving') : t('addToList')}
             </button>
           </form>
         </div>

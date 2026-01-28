@@ -4,6 +4,7 @@ import { useState } from "react";
 import { login, signup } from "@/app/actions/auth"; // Server actions
 import { Loader2, Mail, CheckCircle } from "lucide-react";
 import { toast } from "react-toastify";
+import { supabase } from "@/app/lib/supebaseClient";
 
 export default function LoginPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -15,7 +16,26 @@ export default function LoginPage() {
         setLoading(true);
         try {
             if (isLogin) {
-                await login(formData);
+                // Pre-check pairing status before login redirects
+                const { data: { user } } = await supabase.auth.signInWithPassword({
+                    email: formData.get('email') as string,
+                    password: formData.get('password') as string,
+                });
+
+                if (user) {
+                    // Check pairing status and cache it
+                    const { data: coupleData } = await supabase
+                        .from("couples")
+                        .select("*")
+                        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+                        .maybeSingle();
+
+                    localStorage.setItem('heartsync_isPaired', (!!coupleData).toString());
+                }
+
+                // Now redirect
+                window.location.href = '/';
+                return;
             } else {
                 // REGISTER LOGIC
                 const password = formData.get("password") as string;

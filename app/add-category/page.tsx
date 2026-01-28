@@ -7,10 +7,15 @@ import { Save, X, Loader2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 // Hazırladığımız mapping dosyasını çağırıyoruz
 import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
+import { TranslationKey } from "@/app/lib/translations";
 
 export default function AddCategoryPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
+  const { colors, isPaired } = useTheme();
 
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
@@ -50,7 +55,7 @@ export default function AddCategoryPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error("Oturum açmanız gerekiyor.");
+        toast.error(t('error'));
         setLoading(false);
         return;
       }
@@ -80,7 +85,7 @@ export default function AddCategoryPage() {
         finalIconName = publicUrlData.publicUrl;
       } else if (activeTab === "image" && !selectedFile) {
         // Resim tabında ama resim seçmemiş -> Hata ver veya varsayılanı kullan
-        toast.warning("Lütfen bir resim seçin veya İkon tabını kullanın.");
+        toast.warning(t('partnerCodeEmpty'));
         setLoading(false);
         return;
       }
@@ -100,22 +105,22 @@ export default function AddCategoryPage() {
 
       if (error) throw error;
 
-      toast.success("Kategori eklendi! 🎉");
+      toast.success(t('success'));
       router.push("/");
       router.refresh();
     } catch (error: any) {
       console.error("Full Error Object:", error);
-      toast.error("Hata: " + (error.message || "Bir şeyler ters gitti"));
+      toast.error(t('error') + ": " + (error.message || "Bir şeyler ters gitti"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 border-pink-100">
+    <main className={`min-h-screen ${colors.pageBg} flex items-center justify-center p-4`}>
+      <div className={`bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 ${isPaired ? 'border-pink-100' : 'border-slate-100'}`}>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Kategori Ekle</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{t('addCategory')}</h1>
           <button
             onClick={() => router.back()}
             className="text-gray-400 hover:text-gray-600"
@@ -128,12 +133,12 @@ export default function AddCategoryPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Adı
+                {t('categoryName')}
               </label>
               <input
                 required
                 type="text"
-                placeholder="Örn: Müzik"
+                placeholder={t('categoryNamePlaceholder')}
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -143,12 +148,12 @@ export default function AddCategoryPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Kodu
+                {t('categoryKey')}
               </label>
               <input
                 required
                 type="text"
-                placeholder="Örn: music"
+                placeholder={t('categoryKeyPlaceholder')}
                 value={formData.key}
                 onChange={(e) =>
                   setFormData({ ...formData, key: e.target.value })
@@ -161,7 +166,7 @@ export default function AddCategoryPage() {
           {/* TABLARI SEÇME (İkon Listesi vs Resim Yükle) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Görünüm Seçimi
+              {t('appearance')}
             </label>
             <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
               <button
@@ -172,7 +177,7 @@ export default function AddCategoryPage() {
                   : "text-gray-500 hover:text-gray-700"
                   }`}
               >
-                İkon Listesi
+                {t('iconList')}
               </button>
               <button
                 type="button"
@@ -182,7 +187,7 @@ export default function AddCategoryPage() {
                   : "text-gray-500 hover:text-gray-700"
                   }`}
               >
-                Resim Yükle
+                {t('uploadImage')}
               </button>
             </div>
 
@@ -238,7 +243,7 @@ export default function AddCategoryPage() {
                 {!imagePreview && (
                   <>
                     <p className="text-sm text-gray-600 mb-1">
-                      Bir resim yükleyin
+                      {t('uploadNote')}
                     </p>
                     <p className="text-xs text-gray-400 mb-4">
                       PNG, JPG veya GIF (Max 2MB)
@@ -258,7 +263,7 @@ export default function AddCategoryPage() {
                     htmlFor="icon-upload"
                     className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all shadow-sm"
                   >
-                    Dosya Seç
+                    {t('selectFile')}
                   </label>
                 )}
               </div>
@@ -268,7 +273,7 @@ export default function AddCategoryPage() {
           {/* RENK SEÇİMİ */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Renk Teması
+              {t('colorTheme')}
             </label>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {colorOptions.map((color) => (
@@ -288,7 +293,7 @@ export default function AddCategoryPage() {
                     className={`w-3 h-3 rounded-full ${color.dotColor}`}
                   ></div>
 
-                  <span className="text-sm">{color.name}</span>
+                  <span className="text-sm">{t(color.name as TranslationKey)}</span>
                 </div>
               ))}
             </div>
@@ -305,9 +310,9 @@ export default function AddCategoryPage() {
               className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
             />
             <label htmlFor="isOwnerRequired" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
-              Bu kategorideki öğeler için <strong>sahip</strong> seçilsin mi?
+              {t('ownerRequiredQuery')}
               <p className="text-xs text-gray-500 font-normal mt-0.5">
-                (Örn: Kitaplar için kimde olduğunu takip etmek isterseniz işaretleyin)
+                {t('ownerRequiredHint')}
               </p>
             </label>
           </div>
@@ -327,14 +332,14 @@ export default function AddCategoryPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🔒</span>
                   <span className="font-semibold text-purple-900">
-                    Gizli Kategori
+                    {t('privateCategory')}
                   </span>
                 </div>
                 <p className="text-sm text-purple-700 mt-1">
-                  Bu kategoriyi gizli tut (partnerden gizle)
+                  {t('privateCategoryQuery')}
                 </p>
                 <p className="text-xs text-purple-600 mt-1">
-                  Gizli kategoriler partneriniz tarafından görülemez - sürpriz planlamak için mükemmel! 💝
+                  {t('privateCategoryHint')}
                 </p>
               </div>
             </label>
@@ -350,7 +355,7 @@ export default function AddCategoryPage() {
             ) : (
               <Save className="w-5 h-5" />
             )}
-            {loading ? "Kaydediliyor..." : "Kaydet"}
+            {loading ? t('saving') : t('save')}
           </button>
         </form >
       </div >

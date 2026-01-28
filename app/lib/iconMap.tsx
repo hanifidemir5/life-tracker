@@ -44,37 +44,37 @@ export const getIconComponent = (iconName: string, className?: string) => {
 // 'dotColor' alanlarını ekledik, böylece replace yapmaya gerek kalmadı.
 export const colorOptions = [
   {
-    name: "Mavi",
+    name: "colorBlue",
     value: "hover:bg-blue-50",
     iconColor: "text-blue-500",
     dotColor: "bg-blue-500",
   },
   {
-    name: "Kırmızı",
+    name: "colorRed",
     value: "hover:bg-red-50",
     iconColor: "text-red-500",
     dotColor: "bg-red-500",
   },
   {
-    name: "Yeşil",
+    name: "colorGreen",
     value: "hover:bg-green-50",
     iconColor: "text-green-500",
     dotColor: "bg-green-500",
   },
   {
-    name: "Sarı",
+    name: "colorYellow",
     value: "hover:bg-yellow-50",
     iconColor: "text-yellow-500",
     dotColor: "bg-yellow-500",
   },
   {
-    name: "Mor",
+    name: "colorPurple",
     value: "hover:bg-purple-50",
     iconColor: "text-purple-500",
     dotColor: "bg-purple-500",
   },
   {
-    name: "Pembe",
+    name: "colorPink",
     value: "hover:bg-pink-50",
     iconColor: "text-pink-500",
     dotColor: "bg-pink-500",
