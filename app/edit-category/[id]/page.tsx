@@ -30,6 +30,7 @@ export default function EditCategoryPage() {
     icon_name: "Circle",
     color_class: "hover:bg-gray-50",
     is_owner_required: false,
+    is_private: false, // Added field
   });
 
   // Resim Yükleme State'leri
@@ -123,6 +124,7 @@ export default function EditCategoryPage() {
           icon_name: finalIconName,
           color_class: formData.color_class,
           is_owner_required: formData.is_owner_required,
+          is_private: formData.is_private,
         })
         .eq("id", id);
 
@@ -378,6 +380,34 @@ export default function EditCategoryPage() {
             </label>
           </div>
 
+          {/* Private Category Checkbox */}
+          <div className="mt-6 p-4 bg-purple-50 border-2 border-purple-100 rounded-xl">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_private}
+                onChange={(e) =>
+                  setFormData({ ...formData, is_private: e.target.checked })
+                }
+                className="mt-1 w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🔒</span>
+                  <span className="font-semibold text-purple-900">
+                    {t('privateCategory')}
+                  </span>
+                </div>
+                <p className="text-sm text-purple-700 mt-1">
+                  {t('privateCategoryQuery')}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {t('privateCategoryHint')}
+                </p>
+              </div>
+            </label>
+          </div>
+
           <div className="flex flex-col gap-3 pt-4">
             <button
               type="submit"
@@ -432,7 +462,7 @@ export default function EditCategoryPage() {
             </div>
           )}
         </form>
-      </div>
-    </main>
+      </div >
+    </main >
   );
 }
