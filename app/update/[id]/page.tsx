@@ -289,7 +289,7 @@ export default function UpdateItemPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg border border-gray-100 relative">
+      <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 relative">
         {/* CUSTOM DELETE MODAL */}
         {showDeleteModal && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 rounded-2xl animate-in fade-in zoom-in-95 p-6">
@@ -510,19 +510,19 @@ export default function UpdateItemPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('uploadPhotos')} <span className="text-gray-400">({totalPhotos}/{MAX_PHOTOS})</span>
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-5 gap-3">
               {/* Existing Photos */}
               {existingPhotos.map((url, idx) => (
-                <div key={`existing-${idx}`} className="relative w-16 h-16 group">
+                <div key={`existing-${idx}`} className="relative aspect-square group">
                   <img
                     src={url}
                     alt={`Photo ${idx + 1}`}
-                    className="w-full h-full object-cover rounded-lg border-2 border-blue-200"
+                    className="w-full h-full object-cover rounded-xl border-2 border-blue-200 shadow-sm"
                   />
                   <button
                     type="button"
                     onClick={() => removeExistingPhoto(idx)}
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -531,17 +531,17 @@ export default function UpdateItemPage() {
 
               {/* New Photos */}
               {newPhotoPreviews.map((preview, idx) => (
-                <div key={`new-${idx}`} className="relative w-16 h-16 group">
+                <div key={`new-${idx}`} className="relative aspect-square group">
                   <img
                     src={preview}
                     alt={`New Photo ${idx + 1}`}
-                    className="w-full h-full object-cover rounded-lg border-2 border-pink-300"
+                    className="w-full h-full object-cover rounded-xl border-2 border-pink-300 shadow-sm"
                   />
-                  <div className="absolute top-0 left-0 bg-pink-500 text-white text-[8px] px-1 rounded-br">NEW</div>
+                  <div className="absolute top-1 left-1 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">NEW</div>
                   <button
                     type="button"
                     onClick={() => removeNewPhoto(idx)}
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -550,9 +550,9 @@ export default function UpdateItemPage() {
 
               {/* Add Photo Button */}
               {totalPhotos < MAX_PHOTOS && (
-                <label className="w-16 h-16 border-2 border-dashed border-blue-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors">
-                  <ImagePlus className="w-5 h-5 text-blue-400" />
-                  <span className="text-[10px] text-blue-400 mt-0.5">{t('addPhoto')}</span>
+                <label className="aspect-square border-2 border-dashed border-blue-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors">
+                  <ImagePlus className="w-6 h-6 text-blue-400" />
+                  <span className="text-xs text-blue-400 mt-1 font-medium">{t('addPhoto')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -563,7 +563,7 @@ export default function UpdateItemPage() {
                 </label>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">{t('immortalize')}</p>
+            <p className="text-xs text-gray-400 mt-2">{t('immortalize')}</p>
           </div>
 
           {/* BUTONLAR */}
