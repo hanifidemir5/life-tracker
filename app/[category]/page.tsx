@@ -27,6 +27,7 @@ import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useItems, useInvalidateItems, useAllItems, Item, ITEMS_PER_PAGE } from "@/app/hooks/useItems";
 import { useCategories, useCategoryByKey, Category } from "@/app/hooks/useCategories";
 import { itemsToCSV, itemsToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
+import ConfirmModal from "@/app/components/ConfirmModal";
 
 export default function CategoryPage() {
   const params = useParams();
@@ -50,6 +51,13 @@ export default function CategoryPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
+  const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null);
 
   // React Query hooks
   const { data: paginatedData, isLoading: itemsLoading } = useItems(currentCategoryKey, currentPage);
@@ -133,12 +141,18 @@ export default function CategoryPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (!confirm(t('deleteConfirm'))) return;
+    setDeleteItemId(id);
+    setDeleteModalOpen(true);
+  };
 
-    setLocalItems((prev) => prev.filter((item) => item.id !== id));
+  const confirmDelete = async () => {
+    if (deleteItemId === null) return;
+
+    setLocalItems((prev) => prev.filter((item) => item.id !== deleteItemId));
     toast.info(t('itemDeleted'), { autoClose: 1500 });
+    setDeleteModalOpen(false);
 
-    const { error } = await supabase.from("items").delete().eq("id", id);
+    const { error } = await supabase.from("items").delete().eq("id", deleteItemId);
 
     if (error) {
       toast.error(t('deletionFailed'));
@@ -146,17 +160,31 @@ export default function CategoryPage() {
     } else {
       invalidateItems(currentCategoryKey);
     }
+    setDeleteItemId(null);
   };
 
   const handleCategoryChange = (key: string) => {
     if (Object.keys(pendingUpdates).length > 0) {
-      const confirmLeave = confirm(t('unsavedChangesWarning'));
-      if (!confirmLeave) return;
+      setPendingCategoryChange(key);
+      setUnsavedChangesModalOpen(true);
+      return;
     }
+    proceedWithCategoryChange(key);
+  };
+
+  const proceedWithCategoryChange = (key: string) => {
     setIsDropdownOpen(false);
     setCurrentPage(1);
     setSelectedItems(new Set());
     key === "home" ? router.push("/") : router.push(`/${key}`);
+  };
+
+  const confirmUnsavedChanges = () => {
+    setUnsavedChangesModalOpen(false);
+    if (pendingCategoryChange) {
+      proceedWithCategoryChange(pendingCategoryChange);
+      setPendingCategoryChange(null);
+    }
   };
 
   // Export handlers
@@ -216,15 +244,14 @@ export default function CategoryPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedItems.size === 0) return;
+    setBulkDeleteModalOpen(true);
+  };
 
-    const confirmMessage = t('bulkDeleteConfirm')?.replace('{count}', String(selectedItems.size))
-      || `${selectedItems.size} öğeyi silmek istediğinize emin misiniz?`;
-
-    if (!confirm(confirmMessage)) return;
-
+  const confirmBulkDelete = async () => {
     setIsDeleting(true);
+    setBulkDeleteModalOpen(false);
     const idsToDelete = Array.from(selectedItems);
     setLocalItems(prev => prev.filter(item => !selectedItems.has(item.id)));
 
@@ -301,8 +328,8 @@ export default function CategoryPage() {
             <button
               onClick={toggleSelectionMode}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isSelectionMode
-                  ? "bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200"
-                  : "bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200"
+                ? "bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200"
+                : "bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200"
                 }`}
             >
               {isSelectionMode ? (
@@ -651,6 +678,43 @@ export default function CategoryPage() {
       >
         <Plus className="w-8 h-8" />
       </Link>
+
+      {/* Delete Item Modal */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => { setDeleteModalOpen(false); setDeleteItemId(null); }}
+        onConfirm={confirmDelete}
+        title={t('deleteConfirmTitle') || 'Öğeyi Sil'}
+        message={t('deleteConfirm')}
+        confirmText={t('yesDelete')}
+        cancelText={t('cancel')}
+        type="delete"
+      />
+
+      {/* Bulk Delete Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteModalOpen}
+        onClose={() => setBulkDeleteModalOpen(false)}
+        onConfirm={confirmBulkDelete}
+        title={t('bulkDeleteTitle') || 'Toplu Silme'}
+        message={t('bulkDeleteConfirm')?.replace('{count}', String(selectedItems.size)) || `${selectedItems.size} öğeyi silmek istediğinize emin misiniz?`}
+        confirmText={t('yesDelete')}
+        cancelText={t('cancel')}
+        type="delete"
+        loading={isDeleting}
+      />
+
+      {/* Unsaved Changes Modal */}
+      <ConfirmModal
+        isOpen={unsavedChangesModalOpen}
+        onClose={() => { setUnsavedChangesModalOpen(false); setPendingCategoryChange(null); }}
+        onConfirm={confirmUnsavedChanges}
+        title={t('unsavedChangesTitle') || 'Kaydedilmemiş Değişiklikler'}
+        message={t('unsavedChangesWarning')}
+        confirmText={t('leaveAnyway') || 'Yine de Çık'}
+        cancelText={t('stay') || 'Kal'}
+        type="warning"
+      />
     </main>
   );
 }
