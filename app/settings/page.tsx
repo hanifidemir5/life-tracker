@@ -4,9 +4,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/app/lib/supebaseClient";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { ArrowLeft, Copy, Check, Heart, UserPlus, Loader2, Users, BookOpen } from "lucide-react";
+import { ArrowLeft, Copy, Check, Heart, UserPlus, Loader2, Users, BookOpen, Download } from "lucide-react";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { allDataToCSV, allDataToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
+import { Category } from "@/app/hooks/useCategories";
+import { Item } from "@/app/hooks/useItems";
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -17,6 +20,7 @@ export default function SettingsPage() {
     const [currentPartner, setCurrentPartner] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const { t } = useLanguage();
     const { colors, isPaired } = useTheme();
 
@@ -84,6 +88,55 @@ export default function SettingsPage() {
             setIsCopied(true);
             setTimeout(() => setIsCopied(false), 2000);
             toast.success(t('copied'));
+        }
+    };
+
+    // Export all data
+    const handleExportAll = async (type: "csv" | "json") => {
+        setExporting(true);
+        try {
+            // Fetch all categories
+            const { data: categories, error: catError } = await supabase
+                .from("categories")
+                .select("*")
+                .order("id");
+
+            if (catError) throw catError;
+
+            // Fetch all items
+            const { data: items, error: itemsError } = await supabase
+                .from("items")
+                .select("*")
+                .order("id", { ascending: false });
+
+            if (itemsError) throw itemsError;
+
+            // Group items by category
+            const itemsByCategory: Record<string, Item[]> = {};
+            (items || []).forEach((item: Item) => {
+                if (!itemsByCategory[item.category]) {
+                    itemsByCategory[item.category] = [];
+                }
+                itemsByCategory[item.category].push(item);
+            });
+
+            // Generate export content
+            if (type === "csv") {
+                const csvContent = allDataToCSV(categories as Category[], itemsByCategory);
+                const filename = getExportFilename("all_data", "csv");
+                downloadFile(csvContent, filename, "csv");
+            } else {
+                const jsonContent = allDataToJSON(categories as Category[], itemsByCategory);
+                const filename = getExportFilename("all_data", "json");
+                downloadFile(jsonContent, filename, "json");
+            }
+
+            toast.success(t('exportSuccess'));
+        } catch (error) {
+            console.error("Export error:", error);
+            toast.error(t('error'));
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -220,7 +273,42 @@ export default function SettingsPage() {
                         </p>
                     </div>
 
-                    {/* Status Indicator */}
+                    {/* --- EXPORT DATA SECTION --- */}
+                    <div className="pb-8 border-b border-gray-100">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <Download className="w-5 h-5 text-emerald-500" />
+                            {t('exportAll')}
+                        </h2>
+                        <p className="text-sm text-gray-500 mb-4">
+                            {t('exportAllDescription') || 'Download all your categories and items as a backup file.'}
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                onClick={() => handleExportAll("csv")}
+                                disabled={exporting}
+                                className="flex items-center gap-2 px-5 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-medium hover:bg-emerald-100 hover:border-emerald-300 transition-all disabled:opacity-50"
+                            >
+                                {exporting ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <span className="text-lg">📊</span>
+                                )}
+                                {t('exportAsCSV')}
+                            </button>
+                            <button
+                                onClick={() => handleExportAll("json")}
+                                disabled={exporting}
+                                className="flex items-center gap-2 px-5 py-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl font-medium hover:bg-blue-100 hover:border-blue-300 transition-all disabled:opacity-50"
+                            >
+                                {exporting ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <span className="text-lg">📄</span>
+                                )}
+                                {t('exportAsJSON')}
+                            </button>
+                        </div>
+                    </div>
                     {currentPartner ? (
                         <div className="bg-green-50 border border-green-100 rounded-xl p-6 text-center animate-in fade-in zoom-in relative group">
                             <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
