@@ -25,6 +25,7 @@ type Category = {
   id: number;
   key: string;
   name: string;
+  is_owner_required?: boolean;
 };
 
 type ScannedBook = {
@@ -76,7 +77,7 @@ export default function AddItemPage() {
   // --- KATEGORİYE GÖRE OWNER ZORUNLULUĞU ---
   // Seçili kategorinin 'is_owner_required' özelliğini bul
   const selectedCategoryObj = categories.find(c => c.key === formData.category);
-  const isOwnerRequired = selectedCategoryObj ? (selectedCategoryObj as any).is_owner_required : false;
+  const isOwnerRequired = selectedCategoryObj ? selectedCategoryObj.is_owner_required : false;
 
   // Butonların aktif/pasif durumunu kontrol eden mantık
   const isActionDisabled = isOwnerRequired && !formData.owner;
@@ -162,7 +163,7 @@ export default function AddItemPage() {
     });
 
     // Eğer hepsi zaten varsa, yine de modalı aç ama uyarı ver
-    toast.info("All items in this list seem to be already registered.");
+    toast.info(t('allItemsRegistered'));
 
     setSelectedIndices(newIndices);
     setShowSelectionModal(true);
@@ -177,7 +178,7 @@ export default function AddItemPage() {
     formDataUpload.append("image", file);
 
     try {
-      toast.info("Analyzing image... 🤖", { autoClose: 3000 });
+      toast.info(t('scanningImage') + " 🤖", { autoClose: 3000 });
       const response = await fetch("/api/scan-books", {
         method: "POST",
         body: formDataUpload,
@@ -188,7 +189,7 @@ export default function AddItemPage() {
       handleProcessResults(data.books);
     } catch (error) {
       console.error(error);
-      toast.error("An error occurred.");
+      toast.error(t('errorOccurred'));
     } finally {
       stopAnalyzing();
       e.target.value = "";
@@ -198,7 +199,7 @@ export default function AddItemPage() {
   // --- 2. LİSTE (METİN) ---
   const handleProcessList = async () => {
     if (!listText.trim()) {
-      toast.warn("Please paste a list.");
+      toast.warn(t('pleasePasteList'));
       return;
     }
     setShowTextModal(false);
@@ -223,7 +224,7 @@ export default function AddItemPage() {
   const processTextContent = async (text: string, method: AnalysisMethod) => {
     setAnalyzingMethod(method);
     try {
-      toast.info("Processing list... 🤖", { autoClose: 3000 });
+      toast.info(t('processingList'), { autoClose: 3000 });
       const response = await fetch("/api/process-list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -235,7 +236,7 @@ export default function AddItemPage() {
       handleProcessResults(data.books);
     } catch (error) {
       console.error(error);
-      toast.error("Processing failed.");
+      toast.error(t('processingFailed'));
     } finally {
       stopAnalyzing();
     }
@@ -248,7 +249,7 @@ export default function AddItemPage() {
 
     // Fonksiyon çalıştığı andaki güncel kategoriye göre zorunluluğu tekrar kontrol et
     const selectedCat = categories.find(c => c.key === formData.category);
-    const currentIsOwnerRequired = selectedCat ? (selectedCat as any).is_owner_required : false;
+    const currentIsOwnerRequired = selectedCat ? selectedCat.is_owner_required : false;
 
     try {
       const {
@@ -256,7 +257,7 @@ export default function AddItemPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error("You need to log in.");
+        toast.error(t('loginRequired'));
         setLoading(false);
         return;
       }
@@ -292,7 +293,7 @@ export default function AddItemPage() {
       });
 
       if (booksToInsert.length === 0 && duplicateCount > 0) {
-        toast.warning("All selected items are already in your list!");
+        toast.warning(t('allItemsInList'));
         setLoading(false);
         return;
       }
@@ -302,8 +303,8 @@ export default function AddItemPage() {
         if (error) throw error;
       }
 
-      const successMsg = booksToInsert.length > 0 ? `${booksToInsert.length} items added!` : "";
-      const skipMsg = duplicateCount > 0 ? `${duplicateCount} duplicate items skipped.` : "";
+      const successMsg = booksToInsert.length > 0 ? `${booksToInsert.length} ${t('itemsAdded')}` : "";
+      const skipMsg = duplicateCount > 0 ? `${duplicateCount} ${t('duplicatesSkipped')}` : "";
 
       if (duplicateCount > 0) {
         toast.info(`${successMsg} ${skipMsg}`);
@@ -316,7 +317,7 @@ export default function AddItemPage() {
       router.push(`/${formData.category}`);
       router.refresh();
     } catch (error) {
-      toast.error("Save error.");
+      toast.error(t('saveError'));
     } finally {
       setLoading(false);
     }
@@ -335,7 +336,7 @@ export default function AddItemPage() {
 
     // Fonksiyon çalıştığı andaki kategoriye göre kontrol
     const selectedCat = categories.find(c => c.key === formData.category);
-    const currentIsOwnerRequired = selectedCat ? (selectedCat as any).is_owner_required : false;
+    const currentIsOwnerRequired = selectedCat ? selectedCat.is_owner_required : false;
 
     if (currentIsOwnerRequired && !formData.owner) {
       toast.warn(t('pleaseSelectOwner'));
@@ -349,7 +350,7 @@ export default function AddItemPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error("You need to log in.");
+        toast.error(t('loginRequired'));
         setLoading(false);
         return;
       }
@@ -362,7 +363,7 @@ export default function AddItemPage() {
         .ilike("title", formData.title.trim());
 
       if (existingItems && existingItems.length > 0) {
-        toast.warning("This item is already in your list!");
+        toast.warning(t('itemExists'));
         setLoading(false);
         return;
       }
@@ -391,20 +392,20 @@ export default function AddItemPage() {
       setSelectedPhotos([]);
       setPhotoPreviews([]);
 
-      toast.success("Added!");
+      toast.success(t('added'));
       router.push(`/${formData.category}`);
       router.refresh();
     } catch {
-      toast.error("Error");
+      toast.error(t('error'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSpecialActionClick = (e: any, action: () => void) => {
+  const handleSpecialActionClick = (e: React.MouseEvent, action: () => void) => {
     if (isActionDisabled) {
       e.preventDefault();
-      toast.warn("Please select 'Owner' for this category first!");
+      toast.warn(t('ownerRequiredWarn'));
     } else {
       action();
     }
@@ -472,12 +473,12 @@ export default function AddItemPage() {
           <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
             <Sparkles className="w-12 h-12 text-purple-600 animate-pulse mb-4" />
             <h2 className="text-xl font-bold text-gray-800">
-              AI is Working
+              {t('aiWorking')}
             </h2>
             <p className="text-gray-500 mt-2">
-              {analyzingMethod === "camera" && "Scanning image..."}
-              {analyzingMethod === "csv" && "Reading CSV file..."}
-              {analyzingMethod === "text" && "Analyzing list..."}
+              {analyzingMethod === "camera" && t('scanningImage')}
+              {analyzingMethod === "csv" && t('readingCsv')}
+              {analyzingMethod === "text" && t('analyzingList')}
             </p>
           </div>
         )}
@@ -487,7 +488,7 @@ export default function AddItemPage() {
           <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-800">
-                Paste List
+                {t('pasteList')}
               </h2>
               <button onClick={() => setShowTextModal(false)}>
                 <X className="w-6 h-6 text-gray-400" />
@@ -496,14 +497,14 @@ export default function AddItemPage() {
             <textarea
               value={listText}
               onChange={(e) => setListText(e.target.value)}
-              placeholder="Example:&#10;1. Dune - Frank Herbert&#10;2. 1984&#10;3. The Alchemist"
+              placeholder={t('listPlaceholder')}
               className="flex-1 w-full border text-gray-800 border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none mb-4 text-sm"
             />
             <button
               onClick={handleProcessList}
               className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 flex items-center justify-center gap-2"
             >
-              Analyze <ArrowRight className="w-5 h-5" />
+              {t('analyze')} <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         )}
@@ -513,7 +514,7 @@ export default function AddItemPage() {
           <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
             <div className="flex justify-between items-center mb-4 border-b pb-4">
               <h2 className="text-lg font-bold text-gray-800">
-                Items to Add ({foundBooks.length})
+                {t('itemsToAdd')} ({foundBooks.length})
               </h2>
               <button
                 onClick={() => setShowSelectionModal(false)}
@@ -566,7 +567,7 @@ export default function AddItemPage() {
                         </h3>
                         {isAlreadyAdded && (
                           <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                            Already Exists
+                            {t('alreadyExistsBadge')}
                           </span>
                         )}
                       </div>
@@ -595,7 +596,7 @@ export default function AddItemPage() {
                 ) : (
                   <Save className="w-5 h-5" />
                 )}
-                Save ({selectedIndices.size})
+                {t('save')} ({selectedIndices.size})
               </button>
             </div>
           </div>
@@ -625,7 +626,7 @@ export default function AddItemPage() {
                 const selectedCatObj = categories.find(c => c.key === selectedCategory);
                 // KATEGORİ DEĞİŞTİĞİNDE:
                 // Eğer yeni kategori owner gerektirmiyorsa, owner state'ini temizle.
-                const shouldClearOwner = selectedCatObj && !(selectedCatObj as any).is_owner_required;
+                const shouldClearOwner = selectedCatObj && !selectedCatObj.is_owner_required;
 
                 setFormData({
                   ...formData,
@@ -672,9 +673,9 @@ export default function AddItemPage() {
                 className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
                   }`}
               >
-                Who has it now?{" "}
+                {t('whoHasIt')}
                 <span className="text-xs font-normal opacity-70">
-                  (Required)
+                  {t('whoHasItHint')}
                 </span>
               </label>
               <div className="flex gap-4">
@@ -726,7 +727,7 @@ export default function AddItemPage() {
               ) : (
                 <Camera className="w-5 h-5" />
               )}
-              <span className="text-xs font-bold">Camera</span>
+              <span className="text-xs font-bold">{t('camera')}</span>
               <input
                 type="file"
                 accept="image/*"
@@ -753,7 +754,7 @@ export default function AddItemPage() {
               ) : (
                 <ClipboardList className="w-5 h-5" />
               )}
-              <span className="text-xs font-bold">Paste</span>
+              <span className="text-xs font-bold">{t('paste')}</span>
             </button>
 
             {/* 3. CSV BUTTON */}
@@ -769,7 +770,7 @@ export default function AddItemPage() {
               ) : (
                 <FileSpreadsheet className="w-5 h-5" />
               )}
-              <span className="text-xs font-bold">CSV</span>
+              <span className="text-xs font-bold">{t('csv')}</span>
               <input
                 type="file"
                 accept=".csv,.txt"
@@ -783,7 +784,7 @@ export default function AddItemPage() {
           <div className="flex items-center gap-4 my-2">
             <div className="h-px bg-gray-200 flex-1"></div>
             <span className="text-xs text-gray-400 font-medium">
-              OR ENTER MANUALLY
+              {t('orEnterManually')}
             </span>
             <div className="h-px bg-gray-200 flex-1"></div>
           </div>
