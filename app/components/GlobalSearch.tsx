@@ -1,0 +1,188 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/app/lib/supebaseClient";
+import { Search, X, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
+
+type SearchResult = {
+    id: number;
+    title: string;
+    description: string;
+    category: string;
+    status: boolean;
+    category_name?: string;
+    category_icon?: string;
+    category_color?: string;
+};
+
+type Category = {
+    key: string;
+    name: string;
+    icon_name: string;
+    color_class: string;
+};
+
+export default function GlobalSearch() {
+    const { t } = useLanguage();
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<SearchResult[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [categories, setCategories] = useState<Record<string, Category>>({});
+    const [isFocused, setIsFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Fetch categories for mapping
+    useEffect(() => {
+        const fetchCategories = async () => {
+            const { data } = await supabase
+                .from("categories")
+                .select("key, name, icon_name, color_class");
+
+            if (data) {
+                const catMap: Record<string, Category> = {};
+                data.forEach((cat: Category) => {
+                    catMap[cat.key] = cat;
+                });
+                setCategories(catMap);
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    // Search when query changes
+    useEffect(() => {
+        const searchItems = async () => {
+            if (query.trim().length < 2) {
+                setResults([]);
+                return;
+            }
+
+            setIsLoading(true);
+
+            const { data, error } = await supabase
+                .from("items")
+                .select("id, title, description, category, status")
+                .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+                .order("created_at", { ascending: false })
+                .limit(10);
+
+            if (!error && data) {
+                const enrichedResults = data.map((item: SearchResult) => ({
+                    ...item,
+                    category_name: categories[item.category]?.name || item.category,
+                    category_icon: categories[item.category]?.icon_name || "Circle",
+                    category_color: categories[item.category]?.color_class || "bg-gray-100",
+                }));
+                setResults(enrichedResults);
+            }
+
+            setIsLoading(false);
+        };
+
+        const debounce = setTimeout(searchItems, 300);
+        return () => clearTimeout(debounce);
+    }, [query, categories]);
+
+    // Close on click outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setIsFocused(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const getIconColorClass = (bgClass: string) => {
+        const colorOpt = colorOptions.find((c) => c.value === bgClass);
+        return colorOpt ? colorOpt.iconColor : "text-gray-500";
+    };
+
+    const handleClear = () => {
+        setQuery("");
+        setResults([]);
+        inputRef.current?.focus();
+    };
+
+    const handleResultClick = () => {
+        setIsFocused(false);
+        setQuery("");
+        setResults([]);
+    };
+
+    return (
+        <div ref={containerRef} className="relative flex-1 max-w-md">
+            {/* Always visible search input */}
+            <div className={`flex items-center gap-2 bg-white border-2 rounded-full shadow-lg px-4 py-2.5 transition-all ${isFocused ? "border-blue-400 shadow-xl" : "border-gray-200"
+                }`}>
+                <Search className={`w-5 h-5 ${isFocused ? "text-blue-500" : "text-gray-400"}`} />
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onFocus={() => setIsFocused(true)}
+                    placeholder={t('searchPlaceholder') || 'Search items...'}
+                    className="flex-1 outline-none text-gray-800 bg-transparent min-w-0"
+                />
+                {isLoading ? (
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                ) : query && (
+                    <button onClick={handleClear} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
+            </div>
+
+            {/* Results Dropdown */}
+            {isFocused && (results.length > 0 || (query.length >= 2 && !isLoading)) && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[400px] overflow-y-auto">
+                    {results.length > 0 ? (
+                        results.map((item) => (
+                            <Link
+                                key={item.id}
+                                href={`/update/${item.id}`}
+                                onClick={handleResultClick}
+                                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                            >
+                                <div className={`p-2 rounded-full ${item.category_color?.replace("hover:", "")} bg-opacity-50`}>
+                                    {getIconComponent(item.category_icon || "Circle", `w-4 h-4 ${getIconColorClass(item.category_color || "")}`)}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <p className={`font-semibold truncate ${item.status ? "text-gray-400 line-through" : "text-gray-800"}`}>
+                                        {item.title}
+                                    </p>
+                                    {item.description && (
+                                        <p className="text-sm text-gray-500 truncate">{item.description}</p>
+                                    )}
+                                </div>
+
+                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full shrink-0">
+                                    {item.category_name}
+                                </span>
+
+                                <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${item.status ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                                    }`}>
+                                    {item.status ? "✓" : "○"}
+                                </span>
+                            </Link>
+                        ))
+                    ) : (
+                        <div className="px-4 py-8 text-center text-gray-500">
+                            <Search className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                            <p className="font-medium">{t('noResults') || 'No results found'}</p>
+                            <p className="text-sm">{t('tryDifferentSearch') || 'Try a different search term'}</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
