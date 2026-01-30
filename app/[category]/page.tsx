@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
 import {
@@ -19,11 +19,13 @@ import {
   CheckCheck,
   Trash2,
   Download,
+  Upload,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
 import Link from "next/link";
 import { useLanguage } from "@/app/contexts/LanguageContext";
+import { useTheme } from "@/app/contexts/ThemeContext";
 import { useItems, useInvalidateItems, useAllItems, Item, ITEMS_PER_PAGE } from "@/app/hooks/useItems";
 import { useCategories, useCategoryByKey, Category } from "@/app/hooks/useCategories";
 import { itemsToCSV, itemsToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
@@ -33,6 +35,7 @@ export default function CategoryPage() {
   const params = useParams();
   const router = useRouter();
   const { t } = useLanguage();
+  const { colors } = useTheme();
   const currentCategoryKey = params.category as string;
 
   // Pagination state
@@ -57,7 +60,12 @@ export default function CategoryPage() {
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
+
   const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null);
+
+  // Import state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // React Query hooks
   const { data: paginatedData, isLoading: itemsLoading } = useItems(currentCategoryKey, currentPage);
@@ -212,6 +220,70 @@ export default function CategoryPage() {
     setIsExportDropdownOpen(false);
   };
 
+  // Import Handlers
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/json" && !file.name.endsWith(".json")) {
+      toast.error(t('invalidFile'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        setIsImporting(true);
+        const jsonText = event.target?.result as string;
+        const data = JSON.parse(jsonText);
+
+        if (!data.items || !Array.isArray(data.items)) {
+          toast.error(t('invalidFile'));
+          return;
+        }
+
+        // Prepare items for insertion
+        const itemsToInsert = data.items.map((item: any) => ({
+          category_key: currentCategoryKey,
+          title: item.title,
+          description: item.description,
+          status: item.status || false,
+          user_id: currentUserId,
+          owner: item.owner || t('defaultOwner'),
+          image_urls: item.image_urls || []
+        }));
+
+        if (itemsToInsert.length === 0) {
+          toast.info(t('listEmpty'));
+          setIsImporting(false);
+          return;
+        }
+
+        const { error } = await supabase.from("items").insert(itemsToInsert);
+
+        if (error) throw error;
+
+        toast.success(t('importSuccess'));
+        invalidateItems(currentCategoryKey);
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+
+      } catch (error) {
+        console.error("Import error:", error);
+        toast.error(t('importError'));
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= (paginatedData?.totalPages || 1)) {
       setCurrentPage(newPage);
@@ -283,14 +355,14 @@ export default function CategoryPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex justify-center items-center">
+      <main className="min-h-screen p-8 flex justify-center items-start pt-32">
         <Loader2 className="w-10 h-10 animate-spin text-pink-500" />
-      </div>
+      </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 p-8 pb-32">
+    <main className="min-h-screen p-8 pb-32">
       <div className="max-w-4xl mx-auto">
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-20">
@@ -315,7 +387,7 @@ export default function CategoryPage() {
               )}
               <h1 className="text-2xl font-bold text-gray-800">{headerTitle}</h1>
               {paginatedData && (
-                <span className="bg-pink-100 text-pink-700 text-sm font-medium px-2 py-1 rounded-full">
+                <span className="bg-pink-100 text-pink-700 text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                   {paginatedData.totalCount} {t('items') || 'items'}
                 </span>
               )}
@@ -323,12 +395,12 @@ export default function CategoryPage() {
           </div>
 
           {/* Right side controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 w-full md:w-auto">
             {/* SELECT MODE BUTTON */}
             <button
               onClick={toggleSelectionMode}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isSelectionMode
-                ? "bg-rose-100 border border-rose-300 text-rose-700 hover:bg-rose-200"
+                ? `${colors.primaryLight} border ${colors.border} ${colors.primary} hover:opacity-90`
                 : "bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200"
                 }`}
             >
@@ -343,6 +415,24 @@ export default function CategoryPage() {
                   <span className="hidden sm:inline">{t('selectMode')}</span>
                 </>
               )}
+            </button>
+
+            {/* IMPORT BUTTON */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImportFile}
+              accept=".json"
+              style={{ display: "none" }}
+            />
+            <button
+              onClick={handleImportClick}
+              disabled={isImporting}
+              className={`flex items-center gap-2 px-4 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium ${isImporting ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={t('importData')}
+            >
+              <Upload className={`w-4 h-4 ${isImporting ? "animate-bounce" : ""}`} />
+              <span className="hidden sm:inline">{isImporting ? t('importing') : t('importData')}</span>
             </button>
 
             {/* EXPORT DROPDOWN */}
@@ -381,7 +471,7 @@ export default function CategoryPage() {
             </div>
 
             {/* CATEGORY DROPDOWN */}
-            <div className="relative min-w-[240px]">
+            <div className="relative min-w-[180px]">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:border-gray-400 transition-colors"
@@ -411,7 +501,7 @@ export default function CategoryPage() {
                       <div
                         key={cat.id}
                         onClick={() => handleCategoryChange(cat.key)}
-                        className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${currentCategoryKey === cat.key ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50 text-gray-700"
+                        className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${currentCategoryKey === cat.key ? `${colors.primaryLight} ${colors.primary}` : "hover:bg-gray-50 text-gray-700"
                           }`}
                       >
                         <div className={`p-1.5 rounded-full ${cat.color_class.replace("hover:", "")} bg-opacity-30`}>
@@ -429,22 +519,22 @@ export default function CategoryPage() {
 
         {/* SELECTION TOOLBAR */}
         {isSelectionMode && (
-          <div className="flex items-center justify-between bg-rose-50 border border-rose-200 rounded-xl p-4 mb-4">
+          <div className={`flex items-center justify-between ${colors.primaryLight} border ${colors.borderLight} rounded-xl p-4 mb-4`}>
             <div className="flex items-center gap-4">
               <button
                 onClick={selectAllItems}
-                className="text-sm font-medium text-rose-700 hover:text-rose-900 underline"
+                className={`text-sm font-medium ${colors.primary} hover:opacity-80 underline`}
               >
                 {selectedItems.size === localItems.length ? t('deselectAll') : t('selectAll')}
               </button>
-              <span className="text-rose-600 font-medium">
+              <span className={`${colors.accent} font-medium`}>
                 {t('selectedCount')?.replace('{count}', String(selectedItems.size)) || `${selectedItems.size} seçili`}
               </span>
             </div>
             <button
               onClick={handleBulkDelete}
               disabled={selectedItems.size === 0 || isDeleting}
-              className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg font-medium hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.buttonGradient} text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md`}
             >
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {t('bulkDelete')} ({selectedItems.size})
@@ -461,16 +551,16 @@ export default function CategoryPage() {
               className={`bg-white p-6 pt-8 rounded-xl shadow-lg hover:shadow-2xl border-2 transition-all flex items-start justify-between relative group min-h-[120px]
                 ${isSelectionMode ? 'cursor-pointer' : ''}
                 ${selectedItems.has(item.id)
-                  ? "border-rose-400 ring-2 ring-rose-200 bg-rose-50"
+                  ? `border-current ring-2 ring-opacity-50 ${colors.primaryLight} ${colors.primary}`
                   : pendingUpdates.hasOwnProperty(item.id)
-                    ? "border-rose-300 ring-2 ring-rose-100"
-                    : "border-pink-100 hover:border-rose-200"
+                    ? `border-dashed ${colors.borderLight}`
+                    : `${colors.borderLight} hover:${colors.border}`
                 }`}
             >
               {/* Selection Checkbox OR Edit Button */}
               {isSelectionMode ? (
                 <div
-                  className={`absolute top-2 left-2 p-1.5 rounded-lg transition-colors ${selectedItems.has(item.id) ? "bg-rose-500 text-white" : "bg-gray-200 text-gray-400"
+                  className={`absolute top-2 left-2 p-1.5 rounded-lg transition-colors ${selectedItems.has(item.id) ? `bg-gradient-to-br ${colors.buttonGradient} text-white` : "bg-gray-200 text-gray-400"
                     }`}
                 >
                   {selectedItems.has(item.id) ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
@@ -478,7 +568,7 @@ export default function CategoryPage() {
               ) : (
                 <Link
                   href={`/update/${item.id}`}
-                  className="absolute top-2 left-2 p-1.5 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className={`absolute top-2 left-2 p-1.5 text-gray-300 hover:${colors.primary} hover:${colors.primaryLight} rounded-lg transition-colors`}
                   title={t('edit')}
                 >
                   <Pencil className="w-5 h-5" />
@@ -566,7 +656,7 @@ export default function CategoryPage() {
                 <div className="flex flex-col items-center justify-between gap-2 self-stretch">
                   <button
                     onClick={(e) => handleDelete(e, item.id)}
-                    className="p-1.5 text-pink-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    className={`p-1.5 text-gray-400 hover:${colors.primary} hover:${colors.primaryLight} rounded-lg transition-colors`}
                     title={t('delete')}
                   >
                     <Trash2 className="w-5 h-5" />
@@ -586,26 +676,26 @@ export default function CategoryPage() {
           {localItems.length > 0 && (
             <Link
               href={`/add?category=${currentCategoryKey}`}
-              className="bg-white/60 p-6 rounded-xl border-2 border-dashed border-pink-200 hover:border-pink-400 hover:bg-white transition-all flex items-center justify-center gap-3 min-h-[120px] group"
+              className={`bg-white/60 p-6 rounded-xl border-2 border-dashed ${colors.borderLight} hover:${colors.border} hover:bg-white transition-all flex items-center justify-center gap-3 min-h-[120px] group`}
             >
-              <div className="bg-pink-100 p-3 rounded-full group-hover:bg-pink-200 transition-colors">
-                <Plus className="w-6 h-6 text-pink-500" />
+              <div className={`p-3 rounded-full ${colors.primaryLight} transition-colors`}>
+                <Plus className={`w-6 h-6 ${colors.primary}`} />
               </div>
-              <span className="text-pink-600 font-semibold text-lg">{t('addNew')}</span>
+              <span className={`${colors.primary} font-semibold text-lg`}>{t('addNew')}</span>
             </Link>
           )}
 
           {localItems.length === 0 && !isLoading && (
             <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center">
               <div className="bg-gray-50 p-6 rounded-full mb-6 relative group">
-                <div className="absolute inset-0 bg-blue-100/50 rounded-full animate-ping opacity-75"></div>
-                <Plus className="w-12 h-12 text-blue-500 relative z-10" />
+                <div className={`absolute inset-0 ${colors.primaryLight} rounded-full animate-ping opacity-75`}></div>
+                <Plus className={`w-12 h-12 ${colors.primary} relative z-10`} />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">{t('listEmpty')}</h3>
               <p className="text-gray-500 font-medium mb-8 max-w-xs mx-auto">{t('listEmptyMessage')}</p>
               <Link
                 href={`/add?category=${currentCategoryKey}`}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all hover:shadow-lg hover:scale-105 flex items-center gap-2"
+                className={`bg-gradient-to-r ${colors.buttonGradient} text-white px-8 py-3 rounded-xl font-bold transition-all hover:shadow-lg hover:scale-105 flex items-center gap-2`}
               >
                 <Plus className="w-5 h-5" />{t('addNew')}
               </Link>
@@ -635,7 +725,7 @@ export default function CategoryPage() {
                   <button
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
-                    className={`w-10 h-10 rounded-lg font-semibold transition-colors ${currentPage === pageNum ? "bg-pink-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className={`w-10 h-10 rounded-lg font-semibold transition-colors ${currentPage === pageNum ? `bg-gradient-to-r ${colors.buttonGradient} text-white` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                   >
                     {pageNum}
@@ -674,7 +764,7 @@ export default function CategoryPage() {
       {/* Floating Add Button */}
       <Link
         href={`/add?category=${currentCategoryKey}`}
-        className="fixed bottom-8 right-8 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50"
+        className={`fixed bottom-8 right-8 bg-gradient-to-r ${colors.buttonGradient} text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50`}
       >
         <Plus className="w-8 h-8" />
       </Link>
