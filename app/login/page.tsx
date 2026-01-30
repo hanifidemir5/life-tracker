@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { login, signup } from "@/app/actions/auth"; // Server actions
 import { Loader2, Mail, CheckCircle } from "lucide-react";
 import { toast } from "react-toastify";
 import { supabase } from "@/app/lib/supebaseClient";
 
 export default function LoginPage() {
+    const router = useRouter();
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -17,10 +19,14 @@ export default function LoginPage() {
         try {
             if (isLogin) {
                 // Pre-check pairing status before login redirects
-                const { data: { user } } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabase.auth.signInWithPassword({
                     email: formData.get('email') as string,
                     password: formData.get('password') as string,
                 });
+
+                if (error) throw error;
+
+                const user = data.user;
 
                 if (user) {
                     // Check pairing status and cache it
@@ -34,7 +40,8 @@ export default function LoginPage() {
                 }
 
                 // Now redirect
-                window.location.href = '/';
+                router.refresh(); // Refresh server components to update session
+                router.push('/');
                 return;
             } else {
                 // REGISTER LOGIC

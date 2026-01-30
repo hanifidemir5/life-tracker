@@ -281,14 +281,14 @@ export default function UpdateItemPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <main className="w-full h-full flex items-center justify-center p-4 flex-1">
       <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 relative">
         {/* CUSTOM DELETE MODAL */}
         {showDeleteModal && (

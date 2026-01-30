@@ -466,8 +466,8 @@ export default function AddItemPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-2xl border-2 border-pink-100 relative overflow-hidden">
+    <main className="min-h-screen flex items-center justify-center p-4">
+      <div className={`bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-2xl border-2 ${colors.borderLight} relative overflow-hidden`}>
         {/* GLOBAL LOADER */}
         {analyzingMethod !== null && (
           <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
@@ -873,7 +873,7 @@ export default function AddItemPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
+              className={`w-full bg-gradient-to-r ${colors.buttonGradient} text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:opacity-90`}
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

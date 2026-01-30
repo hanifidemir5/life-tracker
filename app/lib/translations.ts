@@ -56,6 +56,7 @@ export const translations = {
         page: "Sayfa",
 
         // Export
+        // Export
         exportData: "Dışa Aktar",
         exportAsCSV: "CSV Olarak İndir",
         exportAsJSON: "JSON Olarak İndir",
@@ -63,6 +64,13 @@ export const translations = {
         exportSuccess: "Veriler başarıyla indirildi!",
         exportCategory: "Bu Kategoriyi İndir",
         exportAllDescription: "Tüm kategori ve öğelerinizi yedek dosyası olarak indirin.",
+
+        // Import
+        importData: "Veri İçe Aktar",
+        importSuccess: "Veriler başarıyla yüklendi!",
+        importError: "Veri yüklenirken hata oluştu!",
+        invalidFile: "Geçersiz dosya formatı!",
+        importing: "Yükleniyor...",
 
         // Bulk Delete
         bulkDelete: "Toplu Sil",
@@ -130,6 +138,7 @@ export const translations = {
         partnerId: "Partner ID",
         connect: "Bağlan",
         disconnect: "Bağlantıyı Kes",
+        defaultOwner: "User",
 
         // Toast Messages
         success: "Başarılı!",
@@ -167,6 +176,17 @@ export const translations = {
         colorYellow: "Sarı",
         colorPurple: "Mor",
         colorPink: "Pembe",
+        colorOrange: "Turuncu",
+        colorTeal: "Turkuaz",
+        colorCyan: "Camgöbeği",
+        colorLime: "Limon Yeşili",
+        colorEmerald: "Zümrüt",
+        colorFuchsia: "Fuşya",
+        colorViolet: "Menekşe",
+        colorIndigo: "İndigo",
+        colorRose: "Gül",
+        colorAmber: "Kehribar",
+        colorSlate: "Arduvaz",
 
         // Item Add/Update Pages
         uploadPhotos: "Fotoğraflar",
@@ -288,6 +308,13 @@ export const translations = {
         exportCategory: "Export This Category",
         exportAllDescription: "Download all your categories and items as a backup file.",
 
+        // Import
+        importData: "Import Data",
+        importSuccess: "Data imported successfully!",
+        importError: "Error importing data!",
+        invalidFile: "Invalid file format!",
+        importing: "Importing...",
+
         // Bulk Delete
         bulkDelete: "Bulk Delete",
         bulkDeleteConfirm: "Are you sure you want to delete {count} items?",
@@ -354,6 +381,7 @@ export const translations = {
         partnerId: "Partner ID",
         connect: "Connect",
         disconnect: "Disconnect",
+        defaultOwner: "User",
 
         // Toast Messages
         success: "Success!",
@@ -391,6 +419,17 @@ export const translations = {
         colorYellow: "Yellow",
         colorPurple: "Purple",
         colorPink: "Pink",
+        colorOrange: "Orange",
+        colorTeal: "Teal",
+        colorCyan: "Cyan",
+        colorLime: "Lime",
+        colorEmerald: "Emerald",
+        colorFuchsia: "Fuchsia",
+        colorViolet: "Violet",
+        colorIndigo: "Indigo",
+        colorRose: "Rose",
+        colorAmber: "Amber",
+        colorSlate: "Slate",
 
         // Item Add/Update Pages
         uploadPhotos: "Photos",

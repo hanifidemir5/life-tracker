@@ -117,7 +117,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     return (
         <ThemeContext.Provider value={{ themeMode, isPaired, colors, isLoading }}>
-            {children}
+            <div className={`min-h-screen flex flex-col ${colors.pageBg} transition-colors duration-500`}>
+                {children}
+            </div>
         </ThemeContext.Provider>
     );
 }

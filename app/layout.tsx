@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Plus } from "lucide-react";
-import Link from "next/link";
+import Header from "@/app/components/Header";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { logout } from "@/app/actions/auth";
 import { createClient } from "@/app/lib/supabase/server";
 import { LanguageProvider } from "@/app/contexts/LanguageContext";
 import { ThemeProvider } from "@/app/contexts/ThemeContext";
@@ -38,6 +36,7 @@ export default async function RootLayout({
         <QueryProvider>
           <LanguageProvider>
             <ThemeProvider>
+              <Header />
               {children}
 
               {/* GLOBAL EKLE BUTONU - Sadece Ana Sayfada Göster (Layout'ta path kontrolü zor olduğu için burada bırakıp, kategori sayfasında üstüne binen butonu kullanabiliriz ama çirkin olur. En iyisi Layout'tan kaldırıp sayfalara eklemek.) */}

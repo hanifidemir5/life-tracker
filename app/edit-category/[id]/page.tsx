@@ -187,9 +187,11 @@ export default function EditCategoryPage() {
       </div>
     );
 
+  const activeColorObj = colorOptions.find(c => c.value === formData.color_class) || colorOptions[0];
+
   return (
-    <main className={`min-h-screen ${colors.pageBg} flex items-center justify-center p-4`}>
-      <div className={`bg-white w-full max-w-lg p-8 rounded-2xl shadow-2xl border-2 ${isPaired ? 'border-pink-100' : 'border-slate-100'}`}>
+    <main className="flex-1 flex items-center justify-center p-4">
+      <div className={`bg-white w-full max-w-lg lg:max-w-3xl p-8 rounded-2xl shadow-2xl border-4 transition-colors duration-300 ${activeColorObj.borderColor || (isPaired ? 'border-pink-100' : 'border-slate-100')}`}>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{t('editCategory')}</h1>
           <button
