@@ -3,54 +3,32 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
-import { Loader2, Plus, Pencil, Users, LogOut, Globe, BookOpen } from "lucide-react"; // Added Globe, BookOpen
+import { Loader2, Plus, Pencil, Users, LogOut, Globe, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-
-type Category = {
-  id: number;
-  key: string;
-  name: string;
-  icon_name: string;
-  color_class: string;
-  is_private?: boolean;
-  user_id?: string;
-};
+import { useCategories, Category } from "@/app/hooks/useCategories";
 
 export default function Home() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const { language, setLanguage, t } = useLanguage();
   const { colors, isPaired, isLoading: themeLoading } = useTheme();
 
+  // Fetch user on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      setLoading(true);
-
-      // Get current user
+    const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
-
-      // Fetch all categories
-      const { data: catData } = await supabase.from("categories").select("*").order("id");
-
-      // Filter out private categories that don't belong to current user
-      const visibleCategories = (catData || []).filter((cat) => {
-        // If category is not private, show it
-        if (!cat.is_private) return true;
-        // If category is private, only show if it belongs to current user
-        return cat.user === user?.id;
-      });
-
-      setCategories(visibleCategories);
-      setLoading(false);
+      setAuthLoading(false);
     };
-    fetchCategories();
+    getUser();
   }, []);
+
+  // Use React Query for categories
+  const { data: categories = [], isLoading: categoriesLoading, error } = useCategories(currentUserId);
 
   const getIconColorClass = (bgClass: string) => {
     const colorOpt = colorOptions.find((c) => c.value === bgClass);
@@ -64,7 +42,9 @@ export default function Home() {
   };
 
   // Show neutral loading until theme is determined
-  if (loading || themeLoading)
+  const isLoading = authLoading || categoriesLoading || themeLoading;
+
+  if (isLoading)
     return (
       <div className="h-screen flex items-center justify-center" style={{ backgroundColor: '#fafafa' }}>
         <Loader2 className="animate-spin w-8 h-8" style={{ color: '#9ca3af' }} />
@@ -112,7 +92,7 @@ export default function Home() {
 
       {/* KATEGORILER */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-        {categories.map((cat) => (
+        {categories.map((cat: Category) => (
           <div
             key={cat.id}
             onClick={() => router.push(`/${cat.key}`)}
