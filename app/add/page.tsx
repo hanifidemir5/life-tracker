@@ -467,7 +467,7 @@ export default function AddItemPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl border-2 border-pink-100 relative overflow-hidden">
+      <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-2xl border-2 border-pink-100 relative overflow-hidden">
         {/* GLOBAL LOADER */}
         {analyzingMethod !== null && (
           <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
@@ -824,19 +824,19 @@ export default function AddItemPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t('uploadPhotos')} <span className="text-gray-400">({selectedPhotos.length}/{MAX_PHOTOS})</span>
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-5 gap-3">
                 {/* Photo Previews */}
                 {photoPreviews.map((preview, idx) => (
-                  <div key={idx} className="relative w-16 h-16 group">
+                  <div key={idx} className="relative aspect-square group">
                     <img
                       src={preview}
                       alt={`Photo ${idx + 1}`}
-                      className="w-full h-full object-cover rounded-lg border-2 border-pink-200"
+                      className="w-full h-full object-cover rounded-xl border-2 border-pink-200 shadow-sm"
                     />
                     <button
                       type="button"
                       onClick={() => removePhoto(idx)}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -845,9 +845,9 @@ export default function AddItemPage() {
 
                 {/* Add Photo Button */}
                 {selectedPhotos.length < MAX_PHOTOS && (
-                  <label className="w-16 h-16 border-2 border-dashed border-pink-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 hover:border-pink-400 transition-colors">
-                    <ImagePlus className="w-5 h-5 text-pink-400" />
-                    <span className="text-[10px] text-pink-400 mt-0.5">{t('addPhoto')}</span>
+                  <label className="aspect-square border-2 border-dashed border-pink-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 hover:border-pink-400 transition-colors">
+                    <ImagePlus className="w-6 h-6 text-pink-400" />
+                    <span className="text-xs text-pink-400 mt-1 font-medium">{t('addPhoto')}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -858,7 +858,7 @@ export default function AddItemPage() {
                   </label>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">{t('immortalize')}</p>
+              <p className="text-xs text-gray-400 mt-2">{t('immortalize')}</p>
             </div>
 
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer" onClick={() => setFormData({ ...formData, status: !formData.status })}>
