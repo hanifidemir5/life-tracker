@@ -38,6 +38,8 @@ export const translations = {
         toggleStatus: "Durumu Değiştir",
         edit: "Düzenle",
         delete: "Sil",
+        confirm: "Onayla",
+        cancel: "İptal",
         backToHome: "Ana Sayfaya Dön",
         selectCategoryDropdown: "Seçiniz",
         listEmpty: "Liste Boş!",
@@ -66,11 +68,24 @@ export const translations = {
         bulkDelete: "Toplu Sil",
         bulkDeleteConfirm: "{count} öğeyi silmek istediğinize emin misiniz?",
         bulkDeleteSuccess: "{count} öğe başarıyla silindi!",
+        bulkDeleteTitle: "Toplu Silme",
+        deleteConfirmTitle: "Öğeyi Sil",
+        unsavedChangesTitle: "Kaydedilmemiş Değişiklikler",
+        leaveAnyway: "Yine de Çık",
+        stay: "Kal",
         selectMode: "Seç",
         selectAll: "Tümünü Seç",
         deselectAll: "Seçimi Kaldır",
         selectedCount: "{count} seçili",
         cancelSelection: "İptal",
+
+        // Search
+        search: "Ara",
+        searchPlaceholder: "Öğe ara...",
+        noResults: "Sonuç bulunamadı",
+        tryDifferentSearch: "Farklı bir arama terimi deneyin",
+
+        // Add Item
         addItem: "Yeni Öğe Ekle",
         manualAdd: "Manuel Ekle",
         bulkAdd: "Toplu Ekle",
@@ -143,7 +158,6 @@ export const translations = {
         deleteCategoryConfirmTitle: "⚠️ Dikkat!",
         deleteCategoryConfirmMessage: "Bu kategoriyi silersen içindeki TÜM EŞYALAR da silinecek. Emin misin?",
         yesDelete: "Evet, Sil",
-        cancel: "İptal",
         editCategory: "Kategori Düzenle",
         codeFixed: "Kodu (Değiştirilemez)",
         // Colors
@@ -248,6 +262,8 @@ export const translations = {
         toggleStatus: "Toggle Status",
         edit: "Edit",
         delete: "Delete",
+        confirm: "Confirm",
+        cancel: "Cancel",
         backToHome: "Back to Home",
         selectCategoryDropdown: "Select",
         listEmpty: "List is Empty!",
@@ -276,11 +292,22 @@ export const translations = {
         bulkDelete: "Bulk Delete",
         bulkDeleteConfirm: "Are you sure you want to delete {count} items?",
         bulkDeleteSuccess: "{count} items deleted successfully!",
+        bulkDeleteTitle: "Bulk Delete",
+        deleteConfirmTitle: "Delete Item",
+        unsavedChangesTitle: "Unsaved Changes",
+        leaveAnyway: "Leave Anyway",
+        stay: "Stay",
         selectMode: "Select",
         selectAll: "Select All",
         deselectAll: "Deselect All",
         selectedCount: "{count} selected",
         cancelSelection: "Cancel",
+
+        // Search
+        search: "Search",
+        searchPlaceholder: "Search items...",
+        noResults: "No results found",
+        tryDifferentSearch: "Try a different search term",
 
         // Add Item
         addItem: "Add New Item",
@@ -355,7 +382,6 @@ export const translations = {
         deleteCategoryConfirmTitle: "⚠️ Attention!",
         deleteCategoryConfirmMessage: "If you delete this category, ALL ITEMS inside will also be deleted. Are you sure?",
         yesDelete: "Yes, Delete",
-        cancel: "Cancel",
         editCategory: "Edit Category",
         codeFixed: "Key (Cannot be changed)",
         // Colors
