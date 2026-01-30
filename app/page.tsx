@@ -3,17 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
-import { Loader2, Plus, Pencil, Users, LogOut, Globe, BookOpen } from "lucide-react";
+import { Loader2, Plus, Pencil, Users, LogOut, Globe, BookOpen, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useCategories, Category } from "@/app/hooks/useCategories";
+import GlobalSearch from "@/app/components/GlobalSearch";
 
 export default function Home() {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const { colors, isPaired, isLoading: themeLoading } = useTheme();
 
@@ -36,6 +38,7 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
+    setIsMobileMenuOpen(false);
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
@@ -52,36 +55,96 @@ export default function Home() {
     );
 
   return (
-    <main className={`min-h-screen ${colors.pageBg} flex flex-col items-center justify-center p-8`}>
-      <div className="text-center mb-10 relative pt-28 sm:pt-16 w-full max-w-6xl">
-        {/* Top-right buttons */}
-        <div className="absolute top-0 right-0 flex items-center gap-3">
-          {/* Language Toggle */}
+    <main className={`min-h-screen ${colors.pageBg} flex flex-col items-center justify-center p-4 sm:p-8 pb-32`}>
+      <div className="text-center mb-10 w-full max-w-6xl">
+        {/* HEADER - Responsive */}
+        <div className="flex items-center justify-between gap-3 mb-8">
+          {/* Left: Search (always visible) */}
+          <GlobalSearch />
+
+          {/* Right: Desktop buttons (hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-3">
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+              className={`flex items-center gap-2 px-5 py-2.5 bg-white ${isPaired ? 'text-purple-600 hover:bg-purple-50 border-purple-100 hover:border-purple-200' : 'text-indigo-600 hover:bg-indigo-50 border-indigo-100 hover:border-indigo-200'} rounded-full transition-all font-bold text-sm border-2 shadow-lg hover:shadow-xl`}
+              title={language === 'tr' ? 'Switch to English' : 'Türkçeye geç'}
+            >
+              <Globe className="w-5 h-5" />
+              <span>{language === 'tr' ? 'EN' : 'TR'}</span>
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-600 rounded-full hover:bg-gray-100 transition-all font-bold text-sm border-2 border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
+              title={t('logout')}
+            >
+              <LogOut className="w-5 h-5" />
+              <span>{t('logout')}</span>
+            </button>
+
+            <Link
+              href="/settings"
+              className={`flex items-center gap-2 px-5 py-2.5 bg-white ${isPaired ? 'text-rose-600 hover:bg-rose-50 border-rose-100 hover:border-rose-200' : 'text-blue-600 hover:bg-blue-50 border-blue-100 hover:border-blue-200'} rounded-full transition-all font-bold text-sm border-2 shadow-lg hover:shadow-xl`}
+              title={t('settings')}
+            >
+              {isPaired ? <Users className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+              <span>{t('settings')}</span>
+            </Link>
+          </div>
+
+          {/* Mobile: Burger Menu Button */}
           <button
-            onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-            className={`flex items-center gap-2 px-5 py-2.5 bg-white ${isPaired ? 'text-purple-600 hover:bg-purple-50 border-purple-100 hover:border-purple-200' : 'text-indigo-600 hover:bg-indigo-50 border-indigo-100 hover:border-indigo-200'} rounded-full transition-all font-bold text-sm border-2 shadow-lg hover:shadow-xl`}
-            title={language === 'tr' ? 'Switch to English' : 'Türkçeye geç'}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden flex items-center justify-center w-12 h-12 bg-white rounded-full shadow-lg border-2 border-gray-200 hover:border-gray-300 transition-colors"
           >
-            <Globe className="w-5 h-5" />
-            <span>{language === 'tr' ? 'EN' : 'TR'}</span>
+            {isMobileMenuOpen ? <X className="w-6 h-6 text-gray-600" /> : <Menu className="w-6 h-6 text-gray-600" />}
           </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-600 rounded-full hover:bg-gray-100 transition-all font-bold text-sm border-2 border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
-            title={t('logout')}
-          >
-            <LogOut className="w-5 h-5" />
-            <span>{t('logout')}</span>
-          </button>
-          <Link
-            href="/settings"
-            className={`flex items-center gap-2 px-5 py-2.5 bg-white ${isPaired ? 'text-rose-600 hover:bg-rose-50 border-rose-100 hover:border-rose-200' : 'text-blue-600 hover:bg-blue-50 border-blue-100 hover:border-blue-200'} rounded-full transition-all font-bold text-sm border-2 shadow-lg hover:shadow-xl`}
-            title={t('settings')}
-          >
-            {isPaired ? <Users className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
-            <span>{t('settings')}</span>
-          </Link>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/30 z-40 md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+
+            {/* Menu */}
+            <div className="fixed top-20 right-4 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 md:hidden overflow-hidden min-w-[200px]">
+              <button
+                onClick={() => {
+                  setLanguage(language === 'tr' ? 'en' : 'tr');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-5 py-4 ${isPaired ? 'text-purple-600 hover:bg-purple-50' : 'text-indigo-600 hover:bg-indigo-50'} transition-colors border-b border-gray-100`}
+              >
+                <Globe className="w-5 h-5" />
+                <span className="font-semibold">{language === 'tr' ? 'English' : 'Türkçe'}</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-5 py-4 text-gray-600 hover:bg-gray-50 transition-colors border-b border-gray-100"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="font-semibold">{t('logout')}</span>
+              </button>
+
+              <Link
+                href="/settings"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`w-full flex items-center gap-3 px-5 py-4 ${isPaired ? 'text-rose-600 hover:bg-rose-50' : 'text-blue-600 hover:bg-blue-50'} transition-colors`}
+              >
+                {isPaired ? <Users className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+                <span className="font-semibold">{t('settings')}</span>
+              </Link>
+            </div>
+          </>
+        )}
+
+        {/* Title */}
         <h1 className="text-4xl font-extrabold text-gray-900 mb-3">
           {isPaired ? t('appName') : t('appNameSingle')}
         </h1>
@@ -110,7 +173,7 @@ export default function Home() {
             {/* EDİT BUTONU (SAĞ ÜST) */}
             <button
               onClick={(e) => {
-                e.stopPropagation(); // Kartın tıklanmasını engelle
+                e.stopPropagation();
                 router.push(`/edit-category/${cat.id}`);
               }}
               className="absolute top-4 right-4 p-2 bg-white/80 rounded-full text-gray-400 hover:text-blue-600 hover:bg-white shadow-sm transition-all opacity-0 group-hover:opacity-100"
