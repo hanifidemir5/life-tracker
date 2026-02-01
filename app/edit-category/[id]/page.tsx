@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/app/lib/supebaseClient";
 import { Save, X, Loader2, Trash2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
@@ -9,6 +11,7 @@ import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { TranslationKey } from "@/app/lib/translations";
+import { categorySchema, CategoryFormData } from "@/app/lib/schemas";
 
 export default function EditCategoryPage() {
   const router = useRouter();
@@ -24,14 +27,32 @@ export default function EditCategoryPage() {
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
 
-  const [formData, setFormData] = useState({
-    name: "",
-    key: "",
-    icon_name: "Circle",
-    color_class: "hover:bg-gray-50",
-    is_owner_required: false,
-    is_private: false, // Added field
+  // React Hook Form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<CategoryFormData>({
+    resolver: zodResolver(categorySchema) as any,
+    mode: "onBlur",
+    defaultValues: {
+      name: "",
+      key: "",
+      icon_name: "Circle",
+      color_class: "hover:bg-gray-50",
+      is_owner_required: false,
+      is_private: false,
+    }
   });
+
+  const currentIconName = watch("icon_name");
+  const currentColorClass = watch("color_class");
+  const currentIsOwnerRequired = watch("is_owner_required");
+  const currentIsPrivate = watch("is_private");
+  const currentKey = watch("key");
 
   // Resim Yükleme State'leri
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -50,7 +71,15 @@ export default function EditCategoryPage() {
         toast.error(t('error'));
         router.push("/");
       } else {
-        setFormData(data);
+        // Form verilerini doldur
+        reset({
+          name: data.name,
+          key: data.key,
+          icon_name: data.icon_name || "Circle",
+          color_class: data.color_class || "hover:bg-gray-50",
+          is_owner_required: data.is_owner_required || false,
+          is_private: data.is_private || false,
+        });
 
         // Eğer mevcut ikon bir URL ise (http...)
         if (
@@ -66,7 +95,7 @@ export default function EditCategoryPage() {
       setDataLoading(false);
     };
     fetchCategory();
-  }, [id, router]);
+  }, [id, router, reset, t]);
 
   // Dosya seçilince çalışır
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,12 +109,11 @@ export default function EditCategoryPage() {
   };
 
   // 2. GÜNCELLEME İŞLEMİ
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: CategoryFormData) => {
     setLoading(true);
 
     const updateOperation = async () => {
-      let finalIconName = formData.icon_name;
+      let finalIconName = data.icon_name;
 
       if (activeTab === "image") {
         if (selectedFile) {
@@ -120,11 +148,11 @@ export default function EditCategoryPage() {
       const { error } = await supabase
         .from("categories")
         .update({
-          name: formData.name,
+          name: data.name,
           icon_name: finalIconName,
-          color_class: formData.color_class,
-          is_owner_required: formData.is_owner_required,
-          is_private: formData.is_private,
+          color_class: data.color_class,
+          is_owner_required: data.is_owner_required,
+          is_private: data.is_private,
         })
         .eq("id", id);
 
@@ -151,7 +179,7 @@ export default function EditCategoryPage() {
 
     try {
       // Önce içindeki eşyaları temizle (Manual Cascade Delete)
-      await supabase.from("items").delete().eq("category", formData.key);
+      await supabase.from("items").delete().eq("category", currentKey);
 
       // Sonra kategoriyi sil - use number for id comparison
       const categoryId = typeof id === 'string' ? parseInt(id, 10) : id;
@@ -187,7 +215,7 @@ export default function EditCategoryPage() {
       </div>
     );
 
-  const activeColorObj = colorOptions.find(c => c.value === formData.color_class) || colorOptions[0];
+  const activeColorObj = colorOptions.find(c => c.value === currentColorClass) || colorOptions[0];
 
   return (
     <main className="flex-1 flex items-center justify-center p-4">
@@ -202,21 +230,21 @@ export default function EditCategoryPage() {
           </button>
         </div>
 
-        <form onSubmit={handleUpdate} className="space-y-6 text-black">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-black">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('categoryName')}
               </label>
               <input
-                required
                 type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all
+                    ${errors.name
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"}`}
+                {...register("name")}
               />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -225,8 +253,8 @@ export default function EditCategoryPage() {
               <input
                 disabled
                 type="text"
-                value={formData.key}
-                className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed font-mono text-sm"
+                {...register("key")}
+                className="w-full px-4 py-2 border border-gray-200 bg-gray-100 rounded-xl text-gray-500 cursor-not-allowed font-mono text-sm"
               />
             </div>
           </div>
@@ -266,10 +294,10 @@ export default function EditCategoryPage() {
                   <div
                     key={iconKey}
                     onClick={() =>
-                      setFormData({ ...formData, icon_name: iconKey })
+                      setValue("icon_name", iconKey, { shouldValidate: true })
                     }
                     className={`cursor-pointer p-3 rounded-xl flex items-center justify-center border transition-all hover:bg-gray-50
-                      ${formData.icon_name === iconKey && activeTab === "icon"
+                      ${currentIconName === iconKey
                         ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
                         : "border-gray-200"
                       }
@@ -348,10 +376,10 @@ export default function EditCategoryPage() {
                 <div
                   key={color.name}
                   onClick={() =>
-                    setFormData({ ...formData, color_class: color.value })
+                    setValue("color_class", color.value, { shouldValidate: true })
                   }
                   className={`cursor-pointer px-4 py-2 rounded-lg border transition-all whitespace-nowrap flex items-center gap-2
-                             ${formData.color_class === color.value
+                             ${currentColorClass === color.value
                       ? "border-gray-400 bg-gray-100 ring-1 ring-gray-300"
                       : "border-gray-200"
                     }
@@ -370,8 +398,8 @@ export default function EditCategoryPage() {
             <input
               type="checkbox"
               id="isOwnerRequired"
-              checked={formData.is_owner_required}
-              onChange={(e) => setFormData({ ...formData, is_owner_required: e.target.checked })}
+              checked={currentIsOwnerRequired}
+              onChange={(e) => setValue("is_owner_required", e.target.checked)}
               className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
             />
             <label htmlFor="isOwnerRequired" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
@@ -387,9 +415,9 @@ export default function EditCategoryPage() {
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.is_private}
+                checked={currentIsPrivate}
                 onChange={(e) =>
-                  setFormData({ ...formData, is_private: e.target.checked })
+                  setValue("is_private", e.target.checked)
                 }
                 className="mt-1 w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500"
               />
