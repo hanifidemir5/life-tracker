@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/app/lib/supebaseClient";
 import {
   Save,
@@ -17,16 +19,20 @@ import {
 import { toast } from "react-toastify";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { itemSchema, ItemFormData } from "@/app/lib/schemas";
 
 type Category = {
   id: number;
   key: string;
   name: string;
+  is_owner_required?: boolean;
 };
 
 export default function UpdateItemPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const itemId = params.id;
   const { t } = useLanguage();
   const { colors, isPaired } = useTheme();
@@ -37,15 +43,35 @@ export default function UpdateItemPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
 
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "",
-    description: "",
-    owner: "",
-    status: false,
-    created_at: "",
+  // React Hook Form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<ItemFormData>({
+    resolver: zodResolver(itemSchema) as any,
+    mode: "onBlur",
+    defaultValues: {
+      title: "",
+      category: "",
+      description: "",
+      owner: "",
+      status: false,
+    }
   });
+
+  const currentCategoryKey = watch("category");
+  const currentStatus = watch("status");
+  const currentOwner = watch("owner");
+  const currentTitle = watch("title");
+
+  // Date state separately (schema doesn't enforce it, supabase handles it)
+  const [itemDate, setItemDate] = useState("");
 
   // Photo upload state (max 5 photos)
   const MAX_PHOTOS = 5;
@@ -54,9 +80,6 @@ export default function UpdateItemPage() {
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]); // Previews for new photos
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
-
-
-  // --- KATEGORİYE GÖRE DURUM METNİ BELİRLEME ---
   // --- KATEGORİYE GÖRE DURUM METNİ BELİRLEME ---
   const getStatusLabel = (category: string, status: boolean) => {
     if (status) {
@@ -85,8 +108,6 @@ export default function UpdateItemPage() {
       }
     }
   };
-
-  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,14 +143,15 @@ export default function UpdateItemPage() {
         if (error) throw error;
 
         if (itemData) {
-          setFormData({
+          reset({
             title: itemData.title,
             category: itemData.category,
             description: itemData.description || "",
             owner: itemData.owner || "",
             status: itemData.status,
-            created_at: itemData.created_at ? itemData.created_at.split('T')[0] : "",
           });
+          setItemDate(itemData.created_at ? itemData.created_at.split('T')[0] : "");
+
           // Load existing photos
           if (itemData.image_urls && Array.isArray(itemData.image_urls)) {
             setExistingPhotos(itemData.image_urls);
@@ -145,16 +167,14 @@ export default function UpdateItemPage() {
     };
 
     if (itemId) fetchData();
-  }, [itemId, router]);
+  }, [itemId, router, reset, t]);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const onSubmit = async (data: ItemFormData) => {
     // Kategorinin zorunluluk durumunu kontrol et
-    const currentCategory = categories.find(c => c.key === formData.category);
-    const isOwnerRequired = currentCategory ? (currentCategory as any).is_owner_required : false;
+    const currentCategoryObj = categories.find(c => c.key === data.category);
+    const isOwnerRequired = currentCategoryObj ? currentCategoryObj.is_owner_required : false;
 
-    if (isOwnerRequired && !formData.owner) {
+    if (isOwnerRequired && !data.owner) {
       toast.warn(t('pleaseSelectOwner'));
       return;
     }
@@ -175,13 +195,13 @@ export default function UpdateItemPage() {
       const { error } = await supabase
         .from("items")
         .update({
-          title: formData.title,
-          category: formData.category,
-          description: formData.description,
-          owner: isOwnerRequired ? formData.owner : null,
-          status: formData.status,
+          title: data.title,
+          category: data.category,
+          description: data.description,
+          owner: isOwnerRequired ? data.owner : null,
+          status: data.status,
           image_urls: allPhotoUrls.length > 0 ? allPhotoUrls : null,
-          created_at: formData.created_at ? new Date(formData.created_at).toISOString() : undefined,
+          created_at: itemDate ? new Date(itemDate).toISOString() : undefined,
         })
         .eq("id", itemId);
 
@@ -192,7 +212,10 @@ export default function UpdateItemPage() {
       setNewPhotoPreviews([]);
 
       toast.success(t('updateSuccess'));
-      router.back();
+
+      // Smart redirect: Go to the category page and highlight the updated item
+      const page = searchParams.get('page') || '1';
+      router.push(`/${data.category}?page=${page}&highlightItem=${itemId}`);
       router.refresh();
     } catch (error) {
       toast.error(t('updateFailed'));
@@ -276,8 +299,8 @@ export default function UpdateItemPage() {
     return uploadedUrls;
   };
 
-  const currentCategoryForRender = categories.find(c => c.key === formData.category);
-  const isOwnerRequired = currentCategoryForRender ? (currentCategoryForRender as any).is_owner_required : false;
+  const currentCategoryObj = categories.find(c => c.key === currentCategoryKey);
+  const isOwnerRequired = currentCategoryObj ? currentCategoryObj.is_owner_required : false;
 
   if (loading) {
     return (
@@ -330,7 +353,10 @@ export default function UpdateItemPage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.back()}
+              onClick={() => {
+                const page = searchParams.get('page') || '1';
+                router.push(`/${currentCategoryKey}?page=${page}`);
+              }}
               className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
             >
               <ArrowLeft className="w-6 h-6" />
@@ -346,35 +372,34 @@ export default function UpdateItemPage() {
           </button>
         </div>
 
-        <form onSubmit={handleUpdate} className="space-y-6 text-black">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-black">
           {/* --- DURUM (STATUS) ALANI --- */}
           <div
             onClick={() =>
-              setFormData({ ...formData, status: !formData.status })
+              setValue("status", !currentStatus, { shouldValidate: true })
             }
-            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${formData.status
+            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${currentStatus
               ? "bg-green-50 border-green-200"
               : "bg-gray-50 border-gray-200 hover:border-blue-300"
               }`}
           >
             <div className="flex flex-col">
               <span
-                className={`font-semibold ${formData.status ? "text-green-800" : "text-gray-700"
+                className={`font-semibold ${currentStatus ? "text-green-800" : "text-gray-700"
                   }`}
               >
                 {t('status')}
               </span>
-              {/* DİNAMİK METİN BURADA KULLANILIYOR */}
               <span
-                className={`text-xs ${formData.status ? "text-green-600" : "text-gray-500"
+                className={`text-xs ${currentStatus ? "text-green-600" : "text-gray-500"
                   }`}
               >
-                {getStatusLabel(formData.category, formData.status)}
+                {getStatusLabel(currentCategoryKey, currentStatus)}
               </span>
             </div>
 
             <div className="transform transition-transform group-active:scale-90">
-              {formData.status ? (
+              {currentStatus ? (
                 <CheckCircle className="w-8 h-8 text-green-500 shadow-sm" />
               ) : (
                 <Circle className="w-8 h-8 text-gray-300 group-hover:text-blue-400 transition-colors" />
@@ -388,14 +413,14 @@ export default function UpdateItemPage() {
               {t('itemName')}
             </label>
             <input
-              required
               type="text"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all
+                    ${errors.title
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"}`}
+              {...register("title")}
             />
+            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title.message}</p>}
           </div>
 
           {/* KATEGORİ */}
@@ -404,18 +429,20 @@ export default function UpdateItemPage() {
               {t('category')}
             </label>
             <select
-              value={formData.category}
+              className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none
+                    ${errors.category
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                  : "border-gray-300 focus:ring-blue-500 bg-white"}`}
+              {...register("category")}
               onChange={(e) => {
+                register("category").onChange(e); // Propagate
                 const newCategory = e.target.value;
                 const newCatObj = categories.find(c => c.key === newCategory);
-                const shouldClearOwner = newCatObj && !(newCatObj as any).is_owner_required;
-                setFormData({
-                  ...formData,
-                  category: newCategory,
-                  owner: shouldClearOwner ? "" : formData.owner,
-                });
+                const shouldClearOwner = newCatObj && !newCatObj.is_owner_required;
+                if (shouldClearOwner) {
+                  setValue("owner", "", { shouldValidate: true });
+                }
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
             >
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.key}>
@@ -423,6 +450,7 @@ export default function UpdateItemPage() {
                 </option>
               ))}
             </select>
+            {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>}
           </div>
 
           {/* DATE PICKER */}
@@ -432,10 +460,8 @@ export default function UpdateItemPage() {
             </label>
             <input
               type="date"
-              value={formData.created_at}
-              onChange={(e) =>
-                setFormData({ ...formData, created_at: e.target.value })
-              }
+              value={itemDate}
+              onChange={(e) => setItemDate(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
@@ -443,13 +469,13 @@ export default function UpdateItemPage() {
           {/* OWNER */}
           {isOwnerRequired && (
             <div
-              className={`p-4 rounded-xl border transition-colors ${!formData.owner
+              className={`p-4 rounded-xl border transition-colors ${!currentOwner
                 ? "bg-red-50 border-red-200"
                 : "bg-blue-50 border-blue-100"
                 }`}
             >
               <label
-                className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
+                className={`block text-sm font-medium mb-2 ${!currentOwner ? "text-red-600" : "text-blue-800"
                   }`}
               >
                 Who has it now?{" "}
@@ -466,18 +492,14 @@ export default function UpdateItemPage() {
                     <div className="relative flex items-center justify-center">
                       <input
                         type="radio"
-                        name="owner"
                         value={profile.name}
-                        checked={formData.owner === profile.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, owner: e.target.value })
-                        }
+                        {...register("owner")}
                         className="peer appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-blue-600 checked:bg-blue-600 transition-all"
                       />
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <span
-                      className={`${formData.owner === profile.name
+                      className={`${currentOwner === profile.name
                         ? "text-gray-900 font-medium"
                         : "text-gray-600"
                         } group-hover:text-gray-900`}
@@ -487,6 +509,7 @@ export default function UpdateItemPage() {
                   </label>
                 ))}
               </div>
+              {errors.owner && <p className="mt-1 text-xs text-red-500">{errors.owner.message}</p>}
             </div>
           )}
 
@@ -497,11 +520,8 @@ export default function UpdateItemPage() {
             </label>
             <textarea
               rows={3}
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+              {...register("description")}
             />
           </div>
 
