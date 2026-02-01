@@ -45,8 +45,8 @@ export default function Home() {
 
   if (isLoading)
     return (
-      <div className="h-screen flex items-center justify-center" style={{ backgroundColor: '#fafafa' }}>
-        <Loader2 className="animate-spin w-8 h-8" style={{ color: '#9ca3af' }} />
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin w-8 h-8 text-gray-400" />
       </div>
     );
 
