@@ -115,6 +115,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const themeMode: ThemeMode = isPaired ? "romantic" : "normal";
     const colors = isPaired ? romanticTheme : normalTheme;
 
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+            </div>
+        );
+    }
+
     return (
         <ThemeContext.Provider value={{ themeMode, isPaired, colors, isLoading }}>
             <div className={`min-h-screen flex flex-col ${colors.pageBg} transition-colors duration-500`}>
