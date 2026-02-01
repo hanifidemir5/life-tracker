@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/app/lib/supebaseClient";
 import { Save, X, Loader2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
@@ -10,6 +12,7 @@ import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { TranslationKey } from "@/app/lib/translations";
+import { categorySchema, CategoryFormData } from "@/app/lib/schemas";
 
 export default function AddCategoryPage() {
   const router = useRouter();
@@ -20,14 +23,29 @@ export default function AddCategoryPage() {
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
 
-  const [formData, setFormData] = useState({
-    name: "",
-    key: "",
-    icon_name: "Circle", // Varsayılan ikon
-    color_class: "hover:bg-gray-50", // Varsayılan
-    is_owner_required: false, // Yeni alan
-    is_private: false, // Private category field
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<CategoryFormData>({
+    resolver: zodResolver(categorySchema) as any,
+    mode: "onBlur", // Updated to match signup page style
+    defaultValues: {
+      name: "",
+      key: "",
+      icon_name: "Circle", // Default icon
+      color_class: "hover:bg-gray-50", // Default color
+      is_owner_required: false,
+      is_private: false,
+    }
   });
+
+  const currentIconName = watch("icon_name");
+  const currentColorClass = watch("color_class");
+  const currentIsOwnerRequired = watch("is_owner_required");
+  const currentIsPrivate = watch("is_private");
 
   // Resim Yükleme State'leri
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,8 +62,7 @@ export default function AddCategoryPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: CategoryFormData) => {
     setLoading(true);
 
     try {
@@ -60,46 +77,47 @@ export default function AddCategoryPage() {
         return;
       }
 
-      let finalIconName = formData.icon_name;
+      let finalIconName = data.icon_name;
 
       // Eğer "Resim Yükle" tabı aktifse ve dosya seçilmişse
-      if (activeTab === "image" && selectedFile) {
-        // 1. Dosya ismini benzersiz yap (türkçe karakterleri temizle vs. basitçe timestamp ekle)
-        const fileExt = selectedFile.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2)}.${fileExt}`;
+      if (activeTab === "image") {
+        if (selectedFile) {
+          // 1. Dosya ismini benzersiz yap
+          const fileExt = selectedFile.name.split(".").pop();
+          const fileName = `${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2)}.${fileExt}`;
 
-        // 2. Supabase Storage'a yükle
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("icons") // 'icons' bucket'ı olmalı
-          .upload(fileName, selectedFile);
+          // 2. Supabase Storage'a yükle
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("icons") // 'icons' bucket'ı olmalı
+            .upload(fileName, selectedFile);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        // 3. Public URL al
-        const { data: publicUrlData } = supabase.storage
-          .from("icons")
-          .getPublicUrl(fileName);
+          // 3. Public URL al
+          const { data: publicUrlData } = supabase.storage
+            .from("icons")
+            .getPublicUrl(fileName);
 
-        finalIconName = publicUrlData.publicUrl;
-      } else if (activeTab === "image" && !selectedFile) {
-        // Resim tabında ama resim seçmemiş -> Hata ver veya varsayılanı kullan
-        toast.warning(t('partnerCodeEmpty'));
-        setLoading(false);
-        return;
+          finalIconName = publicUrlData.publicUrl;
+        } else {
+          toast.warning(t('invalidFile'));
+          setLoading(false);
+          return;
+        }
       }
 
       // 4. Veritabanına kaydet
       const { error } = await supabase.from("categories").insert([
         {
-          name: formData.name,
-          key: formData.key.toLowerCase().replace(/ /g, "-"),
+          name: data.name,
+          key: data.key.toLowerCase().replace(/ /g, "-"), // Keep formatting logic
           icon_name: finalIconName,
-          color_class: formData.color_class,
+          color_class: data.color_class,
           user: user.id,
-          is_owner_required: formData.is_owner_required, // Yeni alan eklendi
-          is_private: formData.is_private, // Private category field
+          is_owner_required: data.is_owner_required,
+          is_private: data.is_private,
         },
       ]);
 
@@ -116,7 +134,7 @@ export default function AddCategoryPage() {
     }
   };
 
-  const activeColorObj = colorOptions.find(c => c.value === formData.color_class) || colorOptions[0];
+  const activeColorObj = colorOptions.find(c => c.value === currentColorClass) || colorOptions[0];
 
   return (
     <main className="flex-1 flex items-center justify-center p-4">
@@ -131,37 +149,37 @@ export default function AddCategoryPage() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 text-black">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-black">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('categoryName')}
               </label>
               <input
-                required
                 type="text"
                 placeholder={t('categoryNamePlaceholder')}
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all
+                    ${errors.name
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"}`} // Updated logic
+                {...register("name")}
               />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('categoryKey')}
               </label>
               <input
-                required
                 type="text"
                 placeholder={t('categoryKeyPlaceholder')}
-                value={formData.key}
-                onChange={(e) =>
-                  setFormData({ ...formData, key: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-sm"
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all font-mono text-sm
+                    ${errors.key
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"}`}
+                {...register("key")}
               />
+              {errors.key && <p className="mt-1 text-xs text-red-500">{errors.key.message}</p>}
             </div>
           </div>
 
@@ -200,10 +218,10 @@ export default function AddCategoryPage() {
                   <div
                     key={iconKey}
                     onClick={() =>
-                      setFormData({ ...formData, icon_name: iconKey })
+                      setValue("icon_name", iconKey, { shouldValidate: true })
                     }
                     className={`cursor-pointer p-3 rounded-xl flex items-center justify-center border transition-all hover:bg-gray-50
-                            ${formData.icon_name === iconKey
+                            ${currentIconName === iconKey
                         ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
                         : "border-gray-200"
                       }
@@ -282,10 +300,10 @@ export default function AddCategoryPage() {
                 <div
                   key={color.name}
                   onClick={() =>
-                    setFormData({ ...formData, color_class: color.value })
+                    setValue("color_class", color.value, { shouldValidate: true })
                   }
                   className={`cursor-pointer px-4 py-2 rounded-lg border transition-all whitespace-nowrap flex items-center gap-2
-                    ${formData.color_class === color.value
+                    ${currentColorClass === color.value
                       ? "border-gray-400 bg-gray-100 ring-1 ring-gray-300"
                       : "border-gray-200"
                     }
@@ -301,14 +319,12 @@ export default function AddCategoryPage() {
             </div>
           </div>
 
-
-
           <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
             <input
               type="checkbox"
               id="isOwnerRequired"
-              checked={formData.is_owner_required}
-              onChange={(e) => setFormData({ ...formData, is_owner_required: e.target.checked })}
+              checked={currentIsOwnerRequired}
+              onChange={(e) => setValue("is_owner_required", e.target.checked)}
               className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
             />
             <label htmlFor="isOwnerRequired" className="text-sm font-medium text-gray-700 select-none cursor-pointer">
@@ -324,9 +340,9 @@ export default function AddCategoryPage() {
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.is_private}
+                checked={currentIsPrivate}
                 onChange={(e) =>
-                  setFormData({ ...formData, is_private: e.target.checked })
+                  setValue("is_private", e.target.checked)
                 }
                 className="mt-1 w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500"
               />
@@ -350,7 +366,7 @@ export default function AddCategoryPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
+            className="w-full bg-linear-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
