@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "../lib/supebaseClient";
 import {
   Save,
@@ -20,6 +22,7 @@ import {
 import { toast } from "react-toastify";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
+import { itemSchema, ItemFormData } from "@/app/lib/schemas";
 
 type Category = {
   id: number;
@@ -56,14 +59,30 @@ export default function AddItemPage() {
 
   const [listText, setListText] = useState("");
 
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "",
-    description: "",
-    owner: "",
-    status: false,
-    created_at: new Date().toISOString().split('T')[0], // Default to today (YYYY-MM-DD)
+  // React Hook Form
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<ItemFormData>({
+    resolver: zodResolver(itemSchema) as any,
+    mode: "onBlur", // Updated to match other forms
+    defaultValues: {
+      title: "",
+      category: "",
+      description: "",
+      owner: "",
+      status: false,
+    }
   });
+
+  const [itemDate, setItemDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const currentCategoryKey = watch("category");
+  const currentOwner = watch("owner");
 
   // Photo upload state (max 5 photos)
   const MAX_PHOTOS = 5;
@@ -76,11 +95,11 @@ export default function AddItemPage() {
 
   // --- KATEGORİYE GÖRE OWNER ZORUNLULUĞU ---
   // Seçili kategorinin 'is_owner_required' özelliğini bul
-  const selectedCategoryObj = categories.find(c => c.key === formData.category);
+  const selectedCategoryObj = categories.find(c => c.key === currentCategoryKey);
   const isOwnerRequired = selectedCategoryObj ? selectedCategoryObj.is_owner_required : false;
 
   // Butonların aktif/pasif durumunu kontrol eden mantık
-  const isActionDisabled = isOwnerRequired && !formData.owner;
+  const isActionDisabled = isOwnerRequired && !currentOwner;
 
   const searchParams = useSearchParams();
   const preSelectedCategory = searchParams.get("category");
@@ -94,10 +113,10 @@ export default function AddItemPage() {
         if (preSelectedCategory) {
           const exists = catData.find((c) => c.key === preSelectedCategory);
           if (exists) {
-            setFormData((prev) => ({ ...prev, category: preSelectedCategory }));
+            setValue("category", preSelectedCategory);
           }
-        } else if (catData.length > 0 && !formData.category) {
-          setFormData((prev) => ({ ...prev, category: catData[0].key }));
+        } else if (catData.length > 0 && !currentCategoryKey) {
+          setValue("category", catData[0].key);
         }
       }
 
@@ -130,7 +149,7 @@ export default function AddItemPage() {
     };
 
     initData();
-  }, [preSelectedCategory]);
+  }, [preSelectedCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopAnalyzing = () => {
     setAnalyzingMethod(null);
@@ -141,7 +160,7 @@ export default function AddItemPage() {
     const { data: existingItems } = await supabase
       .from("items")
       .select("title")
-      .eq("category", formData.category);
+      .eq("category", currentCategoryKey);
 
     // Set haline getir (küçük harf ile)
     const existingTitles = new Set((existingItems || []).map(i => i.title.trim().toLowerCase()));
@@ -178,7 +197,7 @@ export default function AddItemPage() {
     formDataUpload.append("image", file);
 
     try {
-      toast.info(t('scanningImage') + " 🤖", { autoClose: 3000 });
+      toast.info((t('scanningImage') as string) + " 🤖", { autoClose: 3000 });
       const response = await fetch("/api/scan-books", {
         method: "POST",
         body: formDataUpload,
@@ -242,13 +261,12 @@ export default function AddItemPage() {
     }
   };
 
-  // --- TOPLU KAYDETME ---
+  // --- TOPLU KAYDETME (Bulk Add) ---
   const handleSaveSelectedBooks = async () => {
     if (selectedIndices.size === 0) return;
     setLoading(true);
 
-    // Fonksiyon çalıştığı andaki güncel kategoriye göre zorunluluğu tekrar kontrol et
-    const selectedCat = categories.find(c => c.key === formData.category);
+    const selectedCat = categories.find(c => c.key === currentCategoryKey);
     const currentIsOwnerRequired = selectedCat ? selectedCat.is_owner_required : false;
 
     try {
@@ -262,35 +280,54 @@ export default function AddItemPage() {
         return;
       }
 
-      // 1. Önce bu kategorideki mevcut öğelerimi çek (duplicate kontrolü için)
       const { data: existingItems } = await supabase
         .from("items")
         .select("title")
-        .eq("category", formData.category);
+        .eq("category", currentCategoryKey);
 
       const existingTitles = new Set((existingItems || []).map(i => i.title.toLowerCase()));
 
-      // 2. Eklenecek kitapları hazırla (Duplicate olmayanlar)
       const booksToInsert: any[] = [];
       let duplicateCount = 0;
+      let validationErrors = 0;
 
       foundBooks.forEach((book, index) => {
         if (selectedIndices.has(index)) {
           if (existingTitles.has(book.title.toLowerCase())) {
             duplicateCount++;
           } else {
-            booksToInsert.push({
-              title: book.title,
+            // Validate against schema
+            const candidateData = {
+              title: book.title.substring(0, 100), // Truncate to match schema max
+              category: currentCategoryKey,
               description: book.description,
-              category: formData.category,
-              owner: currentIsOwnerRequired ? formData.owner : null,
               status: false,
-              user: user.id,
-              image_urls: book.image_url ? [book.image_url] : null,
-            });
+              owner: currentIsOwnerRequired ? currentOwner || undefined : undefined,
+            };
+
+            const validation = itemSchema.safeParse(candidateData);
+
+            if (validation.success) {
+              booksToInsert.push({
+                ...candidateData,
+                owner: currentIsOwnerRequired ? currentOwner : null, // DB expects null/string, schema optional
+                user: user.id,
+                image_urls: book.image_url ? [book.image_url] : null,
+                created_at: new Date().toISOString(),
+              });
+            } else {
+              console.error("Validation failed for:", book.title, validation.error);
+              validationErrors++;
+            }
           }
         }
       });
+
+      if (booksToInsert.length === 0 && duplicateCount === 0 && validationErrors > 0) {
+        toast.error(`${validationErrors} ${t('saveError')}`);
+        setLoading(false);
+        return;
+      }
 
       if (booksToInsert.length === 0 && duplicateCount > 0) {
         toast.warning(t('allItemsInList'));
@@ -314,7 +351,7 @@ export default function AddItemPage() {
 
       setShowSelectionModal(false);
       setFoundBooks([]);
-      router.push(`/${formData.category}`);
+      router.push(`/${currentCategoryKey}`);
       router.refresh();
     } catch (error) {
       toast.error(t('saveError'));
@@ -331,14 +368,8 @@ export default function AddItemPage() {
   };
 
   // --- MANUEL KAYDETME ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Fonksiyon çalıştığı andaki kategoriye göre kontrol
-    const selectedCat = categories.find(c => c.key === formData.category);
-    const currentIsOwnerRequired = selectedCat ? selectedCat.is_owner_required : false;
-
-    if (currentIsOwnerRequired && !formData.owner) {
+  const onSubmit = async (data: ItemFormData) => {
+    if (isOwnerRequired && !data.owner) {
       toast.warn(t('pleaseSelectOwner'));
       return;
     }
@@ -355,12 +386,11 @@ export default function AddItemPage() {
         return;
       }
 
-      // DUPLICATE CONTROL
       const { data: existingItems } = await supabase
         .from("items")
         .select("id")
-        .eq("category", formData.category)
-        .ilike("title", formData.title.trim());
+        .eq("category", data.category)
+        .ilike("title", data.title.trim());
 
       if (existingItems && existingItems.length > 0) {
         toast.warning(t('itemExists'));
@@ -368,7 +398,6 @@ export default function AddItemPage() {
         return;
       }
 
-      // Upload photos if any
       let imageUrls: string[] = [];
       if (selectedPhotos.length > 0) {
         toast.info(t('uploadingPhotos'));
@@ -377,23 +406,22 @@ export default function AddItemPage() {
 
       await supabase.from("items").insert([
         {
-          title: formData.title.trim(),
-          category: formData.category,
-          description: formData.description,
-          owner: currentIsOwnerRequired ? formData.owner : null,
-          status: formData.status,
+          title: data.title.trim(),
+          category: data.category,
+          description: data.description,
+          owner: isOwnerRequired ? data.owner : null,
+          status: data.status,
           user: user.id,
           image_urls: imageUrls.length > 0 ? imageUrls : null,
-          created_at: formData.created_at ? new Date(formData.created_at).toISOString() : new Date().toISOString(),
+          created_at: itemDate ? new Date(itemDate).toISOString() : new Date().toISOString(),
         },
       ]);
 
-      // Clear photo state
       setSelectedPhotos([]);
       setPhotoPreviews([]);
 
       toast.success(t('added'));
-      router.push(`/${formData.category}`);
+      router.push(`/${data.category}`);
       router.refresh();
     } catch {
       toast.error(t('error'));
@@ -411,7 +439,6 @@ export default function AddItemPage() {
     }
   };
 
-  // Photo upload handlers
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
@@ -422,7 +449,6 @@ export default function AddItemPage() {
       return;
     }
 
-    // Generate previews
     const newPreviews = files.map(file => URL.createObjectURL(file));
     setSelectedPhotos(prev => [...prev, ...files]);
     setPhotoPreviews(prev => [...prev, ...newPreviews]);
@@ -430,7 +456,7 @@ export default function AddItemPage() {
   };
 
   const removePhoto = (index: number) => {
-    URL.revokeObjectURL(photoPreviews[index]); // Cleanup
+    URL.revokeObjectURL(photoPreviews[index]);
     setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
     setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -483,7 +509,7 @@ export default function AddItemPage() {
           </div>
         )}
 
-        {/* --- METİN GİRİŞ MODALI --- */}
+        {/* --- MODALS --- */}
         {showTextModal && (
           <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
             <div className="flex justify-between items-center mb-4">
@@ -509,7 +535,6 @@ export default function AddItemPage() {
           </div>
         )}
 
-        {/* --- SELECTION MODAL --- */}
         {showSelectionModal && (
           <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
             <div className="flex justify-between items-center mb-4 border-b pb-4">
@@ -620,23 +645,21 @@ export default function AddItemPage() {
               {t('category')}
             </label>
             <select
-              value={formData.category}
+              className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none
+                    ${errors.category
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                  : "border-gray-300 focus:ring-blue-500 bg-white"}`}
+              {...register("category")}
               onChange={(e) => {
+                register("category").onChange(e); // Propagate to react-hook-form
                 const selectedCategory = e.target.value;
                 const selectedCatObj = categories.find(c => c.key === selectedCategory);
-                // KATEGORİ DEĞİŞTİĞİNDE:
-                // Eğer yeni kategori owner gerektirmiyorsa, owner state'ini temizle.
                 const shouldClearOwner = selectedCatObj && !selectedCatObj.is_owner_required;
-
-                setFormData({
-                  ...formData,
-                  category: selectedCategory,
-                  owner: shouldClearOwner ? "" : formData.owner,
-                });
+                if (shouldClearOwner) {
+                  setValue("owner", undefined); // Clear owner if not required
+                }
               }}
               disabled={!!preSelectedCategory}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white ${preSelectedCategory ? "bg-gray-100 cursor-not-allowed" : ""
-                }`}
             >
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.key}>
@@ -644,6 +667,9 @@ export default function AddItemPage() {
                 </option>
               ))}
             </select>
+            {errors.category && (
+              <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>
+            )}
           </div>
 
           {/* DATE PICKER */}
@@ -653,24 +679,22 @@ export default function AddItemPage() {
             </label>
             <input
               type="date"
-              value={formData.created_at}
-              onChange={(e) =>
-                setFormData({ ...formData, created_at: e.target.value })
-              }
+              value={itemDate}
+              onChange={(e) => setItemDate(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
-          {/* OWNER UI (SADECE KİTAP/LEGO İSE GÖZÜKÜR) */}
+          {/* OWNER UI */}
           {isOwnerRequired && (
             <div
-              className={`p-4 rounded-xl border transition-colors ${!formData.owner
+              className={`p-4 rounded-xl border transition-colors ${!currentOwner
                 ? "bg-red-50 border-red-200 animate-pulse"
                 : "bg-blue-50 border-blue-100"
                 }`}
             >
               <label
-                className={`block text-sm font-medium mb-2 ${!formData.owner ? "text-red-600" : "text-blue-800"
+                className={`block text-sm font-medium mb-2 ${!currentOwner ? "text-red-600" : "text-blue-800"
                   }`}
               >
                 {t('whoHasIt')}
@@ -687,18 +711,14 @@ export default function AddItemPage() {
                     <div className="relative flex items-center justify-center">
                       <input
                         type="radio"
-                        name="owner"
                         value={profile.name}
-                        checked={formData.owner === profile.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, owner: e.target.value })
-                        }
+                        {...register("owner")}
                         className="peer appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-blue-600 checked:bg-blue-600 transition-all"
                       />
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <span
-                      className={`${formData.owner === profile.name
+                      className={`${currentOwner === profile.name
                         ? "text-gray-900 font-medium"
                         : "text-gray-600"
                         } group-hover:text-gray-900`}
@@ -708,18 +728,19 @@ export default function AddItemPage() {
                   </label>
                 ))}
               </div>
+              {errors.owner && (
+                <p className="mt-1 text-xs text-red-500">{errors.owner.message}</p>
+              )}
             </div>
           )}
 
-          {/* --- TOPLU EKLEME BUTONLARI (HER ZAMAN GÖRÜNÜR) --- */}
-          {/* Eğer owner zorunluysa ve seçilmediyse butonlar gri ve pasif olur */}
+          {/* SPECIAL ACTION BUTTONS */}
           <div className="grid grid-cols-3 gap-2">
-            {/* 1. KAMERA BUTONU */}
             <label
               onClick={(e) => handleSpecialActionClick(e, () => { })}
               className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-br from-purple-500 to-indigo-600"
+                : "bg-linear-to-br from-purple-500 to-indigo-600"
                 }`}
             >
               {analyzingMethod === "camera" ? (
@@ -738,7 +759,6 @@ export default function AddItemPage() {
               />
             </label>
 
-            {/* 2. LIST BUTTON */}
             <button
               onClick={(e) =>
                 handleSpecialActionClick(e, () => setShowTextModal(true))
@@ -746,7 +766,7 @@ export default function AddItemPage() {
               disabled={analyzingMethod !== null || isActionDisabled}
               className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-br from-pink-500 to-rose-600"
+                : "bg-linear-to-br from-pink-500 to-rose-600"
                 }`}
             >
               {analyzingMethod === "text" ? (
@@ -757,12 +777,11 @@ export default function AddItemPage() {
               <span className="text-xs font-bold">{t('paste')}</span>
             </button>
 
-            {/* 3. CSV BUTTON */}
             <label
               onClick={(e) => handleSpecialActionClick(e, () => { })}
               className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-br from-emerald-500 to-teal-600"
+                : "bg-linear-to-br from-emerald-500 to-teal-600"
                 }`}
             >
               {analyzingMethod === "csv" ? (
@@ -790,64 +809,102 @@ export default function AddItemPage() {
           </div>
 
           {/* MANUEL FORM */}
-          <form onSubmit={handleSubmit} className="space-y-5 text-black">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 text-black">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('itemName')}
               </label>
               <input
-                required
                 type="text"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder={t('listPlaceholder')}
+                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all placeholder-gray-400
+                    ${errors.title
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"}`}
+                {...register("title")}
               />
+              {errors.title && (
+                <p className="mt-1 text-xs text-red-500">{errors.title.message}</p>
+              )}
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('notes')}
+                {t('description')}
               </label>
               <textarea
-                rows={2}
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                rows={3}
+                placeholder={t('descriptionPlaceholder')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-400 resize-none"
+                {...register("description")}
               />
             </div>
 
-            {/* PHOTO UPLOAD SECTION */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('uploadPhotos')} <span className="text-gray-400">({selectedPhotos.length}/{MAX_PHOTOS})</span>
+                {t('status')}
               </label>
-              <div className="grid grid-cols-5 gap-3">
-                {/* Photo Previews */}
-                {photoPreviews.map((preview, idx) => (
-                  <div key={idx} className="relative aspect-square group">
-                    <img
-                      src={preview}
-                      alt={`Photo ${idx + 1}`}
-                      className="w-full h-full object-cover rounded-xl border-2 border-pink-200 shadow-sm"
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="radio"
+                      name="status"
+                      onChange={() => setValue("status", false, { shouldValidate: true })}
+                      checked={watch("status") === false}
+                      className="peer appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-red-500 checked:bg-red-500 transition-all"
                     />
+                    <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
+                  </div>
+                  <span className={`${watch("status") === false ? "font-medium text-red-600" : "text-gray-600"}`}>
+                    {t('notStarted')}
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="radio"
+                      name="status"
+                      onChange={() => setValue("status", true, { shouldValidate: true })}
+                      checked={watch("status") === true}
+                      className="peer appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-green-500 checked:bg-green-500 transition-all"
+                    />
+                    <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
+                  </div>
+                  <span className={`${watch("status") === true ? "font-medium text-green-600" : "text-gray-600"}`}>
+                    {t('completed')}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* FOTOĞRAF YÜKLEME */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('photos')} <span className="text-gray-400 text-xs">({selectedPhotos.length}/{MAX_PHOTOS})</span>
+              </label>
+
+              <div className="flex flex-wrap gap-4">
+                {/* PREVIEWS */}
+                {photoPreviews.map((src, index) => (
+                  <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group shadow-sm">
+                    <img src={src} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                     <button
                       type="button"
-                      onClick={() => removePhoto(idx)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                      onClick={() => removePhoto(index)}
+                      className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-3 h-3" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
 
-                {/* Add Photo Button */}
+                {/* ADD PHOTO BUTTON */}
                 {selectedPhotos.length < MAX_PHOTOS && (
-                  <label className="aspect-square border-2 border-dashed border-pink-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-pink-50 hover:border-pink-400 transition-colors">
-                    <ImagePlus className="w-6 h-6 text-pink-400" />
-                    <span className="text-xs text-pink-400 mt-1 font-medium">{t('addPhoto')}</span>
+                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                    <ImagePlus className="w-6 h-6 text-gray-400 group-hover:text-blue-500 mb-1" />
+                    <span className="text-[10px] text-gray-400 group-hover:text-blue-500 font-medium">Ekle</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -858,29 +915,24 @@ export default function AddItemPage() {
                   </label>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-2">{t('immortalize')}</p>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer" onClick={() => setFormData({ ...formData, status: !formData.status })}>
-              <div className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors ${formData.status ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'}`}>
-                {formData.status && <CheckSquare className="w-4 h-4 text-white" />}
-              </div>
-              <span className="text-sm font-medium text-gray-700 select-none">
-                {t('markAsCompleted')}
-              </span>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className={`w-full bg-gradient-to-r ${colors.buttonGradient} text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-xl hover:opacity-90`}
+              className="w-full bg-linear-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <>
+                  <Loader2 className="animate-spin w-5 h-5" />
+                  {uploadingPhotos ? t('uploading') : t('saving')}
+                </>
               ) : (
-                <Save className="w-5 h-5" />
+                <>
+                  <Save className="w-5 h-5" />
+                  {t('saveItem')}
+                </>
               )}
-              {loading ? t('saving') : t('addToList')}
             </button>
           </form>
         </div>
