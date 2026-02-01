@@ -129,6 +129,11 @@ export const translations = {
         alreadyExistsBadge: "Zaten Var",
         csv: "CSV",
         listPlaceholder: "Örnek:\n1. Dune - Frank Herbert\n2. 1984\n3. Simyacı",
+        descriptionPlaceholder: "Bu öğe hakkında kısa bir açıklama...",
+        notStarted: "Başlanmadı",
+        saveItem: "Öğeyi Kaydet",
+        photos: "Fotoğraflar",
+        uploading: "Yükleniyor...",
 
         // Settings
         partnerConnection: "Partner Bağlantısı",
@@ -372,6 +377,11 @@ export const translations = {
         alreadyExistsBadge: "Already Exists",
         csv: "CSV",
         listPlaceholder: "Example:\n1. Dune - Frank Herbert\n2. 1984\n3. The Alchemist",
+        descriptionPlaceholder: "Short description about this item...",
+        notStarted: "Not Started",
+        saveItem: "Save Item",
+        photos: "Photos",
+        uploading: "Uploading...",
 
         // Settings
         partnerConnection: "Partner Connection",
