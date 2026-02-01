@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
 import {
   CheckCircle,
@@ -34,12 +34,28 @@ import ConfirmModal from "@/app/components/ConfirmModal";
 export default function CategoryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   const { colors } = useTheme();
   const currentCategoryKey = params.category as string;
 
+  // Highlight item after update (from query param)
+  const highlightItemId = searchParams.get("highlightItem");
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  const pageParam = searchParams.get("page");
+  const initialPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const [currentPage, setCurrentPage] = useState(initialPage);
+
+  // Sync state with URL parameter if it changes (e.g. browser back button)
+  useEffect(() => {
+    const page = searchParams.get("page");
+    if (page) {
+      setCurrentPage(parseInt(page, 10));
+    }
+  }, [searchParams]);
 
   // Local state for optimistic updates
   const [localItems, setLocalItems] = useState<Item[]>([]);
@@ -97,6 +113,29 @@ export default function CategoryPage() {
       checkAccess();
     }
   }, [categoryData, router, t]);
+
+  // Scroll to highlighted item after update
+  useEffect(() => {
+    if (highlightItemId && localItems.length > 0) {
+      const itemIdNum = parseInt(highlightItemId, 10);
+      const itemExists = localItems.find(item => item.id === itemIdNum);
+
+      if (itemExists) {
+        // Item is on current page, scroll to it
+        setHighlightedItemId(highlightItemId);
+        setTimeout(() => {
+          const itemRef = itemRefs.current[itemIdNum];
+          if (itemRef) {
+            itemRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Remove highlight after animation
+            setTimeout(() => setHighlightedItemId(null), 2000);
+          }
+        }, 100);
+        // Clean up URL
+        router.replace(`/${currentCategoryKey}`, { scroll: false });
+      }
+    }
+  }, [highlightItemId, localItems, currentCategoryKey, router]);
 
   const getIconColorClass = (bgClass: string) => {
     const colorOpt = colorOptions.find((c) => c.value === bgClass);
@@ -428,7 +467,7 @@ export default function CategoryPage() {
             <button
               onClick={handleImportClick}
               disabled={isImporting}
-              className={`flex items-center gap-2 px-4 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium ${isImporting ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`hidden md:flex items-center gap-2 px-4 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium ${isImporting ? "opacity-50 cursor-not-allowed" : ""}`}
               title={t('importData')}
             >
               <Upload className={`w-4 h-4 ${isImporting ? "animate-bounce" : ""}`} />
@@ -439,7 +478,7 @@ export default function CategoryPage() {
             <div className="relative">
               <button
                 onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors font-medium"
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors font-medium"
                 title={t('exportData')}
               >
                 <Download className="w-4 h-4" />
@@ -542,14 +581,59 @@ export default function CategoryPage() {
           </div>
         )}
 
+        {/* TOP PAGINATION */}
+        {paginatedData && paginatedData.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-4 mb-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={!paginatedData.hasPreviousPage}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+
+            <div className="hidden sm:flex items-center gap-2">
+              {Array.from({ length: Math.min(5, paginatedData.totalPages) }, (_, i) => {
+                let pageNum;
+                if (paginatedData.totalPages <= 5) pageNum = i + 1;
+                else if (currentPage <= 3) pageNum = i + 1;
+                else if (currentPage >= paginatedData.totalPages - 2) pageNum = paginatedData.totalPages - 4 + i;
+                else pageNum = currentPage - 2 + i;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-10 h-10 rounded-lg font-semibold transition-colors ${currentPage === pageNum ? `bg-gradient-to-r ${colors.buttonGradient} text-white` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={!paginatedData.hasNextPage}
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
+
+            <span className="text-sm text-gray-500 ml-2 sm:ml-4 whitespace-nowrap">{t('page') || 'Page'} {currentPage} / {paginatedData.totalPages}</span>
+          </div>
+        )}
+
         {/* LİSTE */}
         <div className="grid grid-cols-1 gap-4 z-0">
           {localItems.map((item) => (
             <div
               key={item.id}
-              onClick={isSelectionMode ? () => toggleItemSelection(item.id) : undefined}
-              className={`bg-white p-6 pt-8 rounded-xl shadow-lg hover:shadow-2xl border-2 transition-all flex items-start justify-between relative group min-h-[120px]
-                ${isSelectionMode ? 'cursor-pointer' : ''}
+              ref={(el) => { itemRefs.current[item.id] = el; }}
+              onClick={() => isSelectionMode ? toggleItemSelection(item.id) : router.push(`/detail/${item.id}?page=${currentPage}&category=${currentCategoryKey}`)}
+              className={`bg-white p-4 md:p-6 md:pt-8 rounded-xl shadow-lg hover:shadow-2xl border-2 transition-all flex flex-col md:flex-row items-center md:items-start justify-between relative group min-h-[120px] cursor-pointer gap-4 md:gap-0
+                ${isSelectionMode ? '' : ''}
+                ${highlightedItemId === String(item.id) ? 'ring-4 ring-yellow-400 animate-pulse' : ''}
                 ${selectedItems.has(item.id)
                   ? `border-current ring-2 ring-opacity-50 ${colors.primaryLight} ${colors.primary}`
                   : pendingUpdates.hasOwnProperty(item.id)
@@ -567,7 +651,8 @@ export default function CategoryPage() {
                 </div>
               ) : (
                 <Link
-                  href={`/update/${item.id}`}
+                  href={`/update/${item.id}?page=${currentPage}`}
+                  onClick={(e) => e.stopPropagation()}
                   className={`absolute top-2 left-2 p-1.5 text-gray-300 hover:${colors.primary} hover:${colors.primaryLight} rounded-lg transition-colors`}
                   title={t('edit')}
                 >
@@ -596,11 +681,11 @@ export default function CategoryPage() {
                     )}
 
                     {item.description && (
-                      <p className="text-sm text-gray-500 border-l pl-2 border-gray-300">{item.description}</p>
+                      <p className="text-sm text-gray-500 border-l pl-2 border-gray-300 hidden sm:block">{item.description}</p>
                     )}
 
                     {item.owner && (
-                      <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+                      <span className="hidden sm:flex items-center gap-1 text-xs font-medium px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
                         <User className="w-3 h-3" />{item.owner}
                       </span>
                     )}
@@ -609,7 +694,7 @@ export default function CategoryPage() {
               </div>
 
               {/* Right Side */}
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex flex-row md:flex-col items-center gap-3 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-start mt-2 md:mt-0">
                 {item.image_urls && item.image_urls.length > 0 && (
                   <div className="relative w-20 h-20">
                     <img
@@ -653,7 +738,7 @@ export default function CategoryPage() {
                   </div>
                 )}
 
-                <div className="flex flex-col items-center justify-between gap-2 self-stretch">
+                <div className="flex md:flex-col items-center justify-between gap-2 self-stretch ml-auto md:ml-0">
                   <button
                     onClick={(e) => handleDelete(e, item.id)}
                     className={`p-1.5 text-gray-400 hover:${colors.primary} hover:${colors.primaryLight} rounded-lg transition-colors`}
@@ -663,7 +748,10 @@ export default function CategoryPage() {
                   </button>
 
                   <button
-                    onClick={() => toggleStatus(item.id, item.status)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatus(item.id, item.status);
+                    }}
                     className="hover:scale-110 transition-transform"
                   >
                     {item.status ? <CheckCircle className="w-8 h-8 text-green-500" /> : <Circle className="w-8 h-8 text-gray-300 hover:text-blue-400" />}
