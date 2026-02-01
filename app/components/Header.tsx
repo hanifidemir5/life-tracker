@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Globe, LogOut, Users, BookOpen, Menu, X } from "lucide-react";
+import { Globe, LogOut, Users, BookOpen, Menu, X, Home } from "lucide-react";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { logout } from "@/app/actions/auth";
@@ -90,6 +90,15 @@ export default function Header() {
 
                     {/* Menu */}
                     <div className="fixed top-20 right-4 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 lg:hidden overflow-hidden min-w-[200px]">
+                        <Link
+                            href="/"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`w-full flex items-center gap-3 px-5 py-4 text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100`}
+                        >
+                            <Home className="w-5 h-5" />
+                            <span className="font-semibold">{isPaired ? t('appName') : t('appNameSingle')}</span>
+                        </Link>
+
                         <button
                             onClick={() => {
                                 setLanguage(language === 'tr' ? 'en' : 'tr');
