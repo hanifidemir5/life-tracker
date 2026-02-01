@@ -88,3 +88,21 @@ export function useInvalidateItems() {
         }
     };
 }
+
+// Fetch a single item by ID
+export function useItem(id: number) {
+    return useQuery({
+        queryKey: ["item", id],
+        queryFn: async (): Promise<Item> => {
+            const { data, error } = await supabase
+                .from("items")
+                .select("*")
+                .eq("id", id)
+                .single();
+
+            if (error) throw error;
+            return data as Item;
+        },
+        enabled: !!id && !isNaN(id),
+    });
+}
