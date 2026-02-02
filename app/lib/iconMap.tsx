@@ -1,27 +1,33 @@
 import {
-  Book,
-  MapPin,
-  Smile,
-  Box,
-  Circle,
-  Heart,
-  Music,
-  Camera,
-  Coffee,
-  Gamepad2,
+  Book, MapPin, Music, Camera, Gamepad2,
+  Utensils, Coffee,
+  Laptop, Tv,
+  Palette, Dumbbell, Car,
+  Home, Briefcase, GraduationCap, DollarSign,
+  Plane, ShoppingCart, Clapperboard, Monitor, Circle
 } from "lucide-react";
 
 export const iconMap: Record<string, any> = {
-  Book,
-  MapPin,
-  Smile,
-  Box,
-  Heart,
-  Music,
-  Camera,
-  Coffee,
-  Gamepad2,
-  Circle,
+  Book,        // Books / Reading
+  MapPin,      // Travel / Places
+  Music,       // Music / Albums
+  Camera,      // Photography / Memories
+  Gamepad2,    // Games
+  Clapperboard: Clapperboard, // Movies (using Clapperboard alias if needed or just Clapperboard)
+  Tv,          // Series / TV
+  Utensils,    // Food / Restaurants
+  Coffee,      // Cafes
+  Laptop,      // Tech / Electronics
+  Monitor,     // Software / Computery stuff
+  Palette,     // Art / Hobbies
+  Dumbbell,    // Sports / Gym
+  Car,         // Vehicles
+  Home,        // Living / House
+  Briefcase,   // Work
+  GraduationCap, // Education
+  DollarSign,  // Finance
+  Plane,       // Flights / Trips
+  ShoppingCart // Shopping
 };
 
 export const getIconComponent = (iconName: string, className?: string) => {
