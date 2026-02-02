@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 // Simple regex-based parser - no AI needed, fast and reliable
 function parseListText(text: string) {
@@ -28,39 +24,40 @@ function parseListText(text: string) {
   });
 }
 
-// Search Wikipedia for an image
-async function searchWikipediaImage(query: string, type: string = ""): Promise<string | undefined> {
-  try {
-    // Construct search query (append type for better context if exists)
-    const searchQuery = type ? `${query} ${type}` : query;
 
-    // Search for the page
-    const searchUrl = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-
-    if (!searchData.query?.search?.length) return undefined;
-
-    const pageId = searchData.query.search[0].pageid;
-
-    // Get page info with image
-    const pageUrl = `https://tr.wikipedia.org/w/api.php?action=query&pageids=${pageId}&prop=pageimages&pithumbsize=500&format=json&origin=*`;
-    const pageRes = await fetch(pageUrl);
-    const pageData = await pageRes.json();
-
-    const pages = pageData.query?.pages;
-    if (!pages) return undefined;
-
-    const page = Object.values(pages)[0] as any;
-    return page.thumbnail?.source;
-  } catch (error) {
-    console.error(`Wikipedia search error for ${query}:`, error);
-    return undefined;
-  }
-}
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {
+            }
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { text } = await req.json();
 
     if (!text) {
@@ -73,20 +70,17 @@ export async function POST(req: Request) {
     // --- VERİTABANI KONTROLÜ VE GÖRSEL ARAMA ---
     const checkedBooks = await Promise.all(
       parsedItems.map(async (book: any) => {
-        // Parallel fetch: check DB + fetch Image
-        const [dbCheck, imageUrl] = await Promise.all([
-          supabase
-            .from("items")
-            .select("id")
-            .ilike("title", book.title)
-            .maybeSingle(),
-          searchWikipediaImage(book.title, book.description)
-        ]);
+        // Just check DB, no image fetch
+        const dbCheck = await supabase
+          .from("items")
+          .select("id")
+          .ilike("title", book.title)
+          .maybeSingle();
 
         return {
           ...book,
           isExists: !!dbCheck.data,
-          image_url: imageUrl
+          image_url: undefined // No image needed
         };
       })
     );
