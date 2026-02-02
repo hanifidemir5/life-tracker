@@ -9,6 +9,7 @@ import { Save, X, Loader2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 // Hazırladığımız mapping dosyasını çağırıyoruz
 import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
+import { useInvalidateCategories } from "@/app/hooks/useCategories";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { TranslationKey } from "@/app/lib/translations";
@@ -19,6 +20,7 @@ export default function AddCategoryPage() {
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
   const { colors, isPaired } = useTheme();
+  const invalidateCategories = useInvalidateCategories();
 
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
@@ -124,6 +126,7 @@ export default function AddCategoryPage() {
       if (error) throw error;
 
       toast.success(t('success'));
+      invalidateCategories();
       router.push("/");
       router.refresh();
     } catch (error: any) {
