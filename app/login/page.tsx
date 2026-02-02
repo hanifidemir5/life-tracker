@@ -138,7 +138,7 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-rose-50 to-red-50 p-4">
+        <main className="min-h-screen flex items-center justify-center bg-linear-to-br from-pink-50 via-rose-50 to-red-50 p-4">
             {/* SUCCESS MODAL (Kayıt Başarılı) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -257,7 +257,7 @@ export default function LoginPage() {
             )}
 
             <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-pink-100 transition-all">
-                <div className={`p-8 ${!isLogin ? "bg-gradient-to-br from-pink-50 to-rose-50" : ""}`}>
+                <div className="p-8">
                     <div className="text-center mb-8">
                         <div className="flex justify-center mb-4 relative h-16 w-24 mx-auto">
                             <Heart className="absolute bottom-0 left-4 w-10 h-10 text-rose-600 fill-current animate-pulse" />
@@ -287,7 +287,7 @@ export default function LoginPage() {
                                     className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all placeholder-gray-400 text-gray-900
                                         ${errors.fullName
                                             ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                                            : "border-gray-300 focus:ring-green-500 focus:border-green-500"}`}
+                                            : "border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"}`}
                                     placeholder="Adınız Soyadınız"
                                     {...register("fullName")}
                                 />
@@ -383,11 +383,8 @@ export default function LoginPage() {
                                 type="submit"
                                 disabled={loading}
                                 className={`w-full font-semibold py-3 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed
-                  ${isLogin
-                                        ? "bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
-                                        : "bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white"
-                                    }
-                `}
+                                    bg-linear-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white
+                                `}
                             >
                                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
                                 {loading
@@ -413,13 +410,13 @@ export default function LoginPage() {
                                 </span>
                             ) : (
                                 <span>
-                                    Zaten hesabın var mı? <span className="text-green-600">Giriş Yap</span>
+                                    Zaten hesabın var mı? <span className="text-indigo-600">Giriş Yap</span>
                                 </span>
                             )}
                         </button>
                     </div>
                 </div>
             </div>
-        </main>
+        </main >
     );
 }
