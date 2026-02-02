@@ -224,7 +224,7 @@ export default function SettingsPage() {
 
     return (
         <main className={`min-h-screen ${colors.pageBg} p-4 flex items-center justify-center`}>
-            <div className={`bg-white w-full max-w-md rounded-2xl shadow-2xl border-2 ${isPaired ? 'border-pink-100' : 'border-slate-100'} overflow-hidden`}>
+            <div className={`bg-white w-full max-w-3xl rounded-2xl shadow-2xl border-2 ${isPaired ? 'border-pink-100' : 'border-slate-100'} overflow-hidden`}>
                 {/* Header */}
                 <div className={`bg-gradient-to-r ${colors.headerGradient} p-6 text-white text-center relative`}>
                     <button
