@@ -8,6 +8,7 @@ import { supabase } from "@/app/lib/supebaseClient";
 import { Save, X, Loader2, Trash2, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 import { iconMap, colorOptions, getIconComponent } from "@/app/lib/iconMap";
+import { useInvalidateCategories } from "@/app/hooks/useCategories";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { TranslationKey } from "@/app/lib/translations";
@@ -23,6 +24,7 @@ export default function EditCategoryPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { t } = useLanguage();
   const { colors, isPaired } = useTheme();
+  const invalidateCategories = useInvalidateCategories();
 
   // Tab State: 'icon' | 'image'
   const [activeTab, setActiveTab] = useState<"icon" | "image">("icon");
@@ -166,6 +168,7 @@ export default function EditCategoryPage() {
         error: t('error'),
       })
       .then(() => {
+        invalidateCategories();
         router.push("/");
         router.refresh();
       })
@@ -198,6 +201,7 @@ export default function EditCategoryPage() {
       }
 
       toast.success(t('success'));
+      invalidateCategories();
       router.push("/");
       router.refresh();
     } catch (error) {
