@@ -195,6 +195,7 @@ export default function AddItemPage() {
     setAnalyzingMethod("camera");
     const formDataUpload = new FormData();
     formDataUpload.append("image", file);
+    formDataUpload.append("category", currentCategoryKey);
 
     try {
       toast.info((t('scanningImage') as string) + " 🤖", { autoClose: 3000 });
@@ -202,13 +203,21 @@ export default function AddItemPage() {
         method: "POST",
         body: formDataUpload,
       });
+
+      if (response.status === 429) {
+        toast.warn(t('serverBusy') || "Sunucu şu an çok yoğun, lütfen 1 dakika bekleyip tekrar deneyin.");
+        throw new Error("Rate limit exceeded");
+      }
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
 
       handleProcessResults(data.books);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error(t('errorOccurred'));
+      if (error.message !== "Rate limit exceeded") {
+        toast.error(t('errorOccurred'));
+      }
     } finally {
       stopAnalyzing();
       e.target.value = "";
