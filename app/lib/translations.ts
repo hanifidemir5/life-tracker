@@ -247,6 +247,7 @@ export const translations = {
         partnerCodeEmpty: "Lütfen partnerinizin kodunu girin.",
         profileUpdated: "Profil güncellendi! ✅",
         updateError: "Profil güncellenemedi.",
+        serverBusy: "Sunucu şu an çok yoğun, lütfen 1 dakika bekleyip tekrar deneyin.",
     },
     en: {
         // Home Page
@@ -495,6 +496,7 @@ export const translations = {
         partnerCodeEmpty: "Please enter your partner's code.",
         profileUpdated: "Profile updated! ✅",
         updateError: "Could not update profile.",
+        serverBusy: "Server is very busy right now, please wait 1 minute and try again.",
     },
 };
 
