@@ -66,6 +66,19 @@ export default function Home() {
 
       {/* KATEGORILER */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
+        <button
+          onClick={() => router.push("/add-category")}
+          className={`w-full flex flex-col items-center justify-center p-8 border-2 border-dashed ${isPaired ? 'border-rose-200 hover:border-rose-400 hover:bg-rose-50' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50'} rounded-2xl transition-all group shadow-lg hover:shadow-xl`}
+          style={{ minHeight: "200px" }}
+        >
+          <div className={`mb-4 p-4 rounded-full ${isPaired ? 'bg-rose-50 group-hover:bg-rose-100' : 'bg-slate-100 group-hover:bg-slate-200'} transition-colors`}>
+            <Plus className={`w-8 h-8 ${isPaired ? 'text-rose-400 group-hover:text-rose-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          </div>
+          <span className={`text-xl font-semibold ${isPaired ? 'text-rose-400 group-hover:text-rose-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+            {t('addCategory')}
+          </span>
+        </button>
+
         {categories.map((cat: Category) => (
           <div
             key={cat.id}
@@ -118,26 +131,13 @@ export default function Home() {
             </span>
           </div>
         ))}
-
-        <button
-          onClick={() => router.push("/add-category")}
-          className={`w-full flex flex-col items-center justify-center p-8 border-2 border-dashed ${isPaired ? 'border-rose-200 hover:border-rose-400 hover:bg-rose-50' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50'} rounded-2xl transition-all group shadow-lg hover:shadow-xl`}
-          style={{ minHeight: "200px" }}
-        >
-          <div className={`mb-4 p-4 rounded-full ${isPaired ? 'bg-rose-50 group-hover:bg-rose-100' : 'bg-slate-100 group-hover:bg-slate-200'} transition-colors`}>
-            <Plus className={`w-8 h-8 ${isPaired ? 'text-rose-400 group-hover:text-rose-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-          </div>
-          <span className={`text-xl font-semibold ${isPaired ? 'text-rose-400 group-hover:text-rose-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
-            {t('addCategory')}
-          </span>
-        </button>
       </div>
 
 
       {/* Floating Add Item Button (Global) */}
       <Link
         href="/add"
-        className={`fixed bottom-8 right-8 bg-linear-to-r ${colors.buttonGradient} hover:opacity-90 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50`}
+        className={`fixed top-24 right-8 bg-linear-to-r ${colors.buttonGradient} hover:opacity-90 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50`}
       >
         <Plus className="w-8 h-8" />
       </Link>
