@@ -13,6 +13,7 @@ import {
     User,
     ChevronLeft,
     ChevronRight,
+    Pencil,
 } from "lucide-react";
 
 export default function ItemDetailPage() {
@@ -81,6 +82,16 @@ export default function ItemDetailPage() {
                             className="p-3 bg-white/80 backdrop-blur-sm hover:bg-white rounded-full shadow-lg transition-all transform hover:scale-105"
                         >
                             <ArrowLeft className="w-6 h-6 text-gray-700" />
+                        </button>
+                    </div>
+
+                    {/* Edit Button (Top Right) */}
+                    <div className="absolute top-6 right-6 z-10">
+                        <button
+                            onClick={() => router.push(`/update/${id}`)}
+                            className="p-3 bg-white/80 backdrop-blur-sm hover:bg-white rounded-full shadow-lg transition-all transform hover:scale-105"
+                        >
+                            <Pencil className="w-5 h-5 text-gray-700" />
                         </button>
                     </div>
 
