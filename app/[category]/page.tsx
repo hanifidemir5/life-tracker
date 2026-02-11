@@ -375,6 +375,49 @@ export default function CategoryPage() {
   };
 
   const headerTitle = categoryData ? categoryData.name : t('headerTitleList');
+
+  const renderPagination = (extraClassName: string) => (
+    <div className={`flex items-center justify-center gap-2 sm:gap-4 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 ${extraClassName}`}>
+      <button
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={!paginatedData!.hasPreviousPage}
+        className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="w-5 h-5 text-gray-600" />
+      </button>
+
+      <div className="flex items-center gap-1 sm:gap-2">
+        {Array.from({ length: Math.min(5, paginatedData!.totalPages) }, (_, i) => {
+          let pageNum;
+          if (paginatedData!.totalPages <= 5) pageNum = i + 1;
+          else if (currentPage <= 3) pageNum = i + 1;
+          else if (currentPage >= paginatedData!.totalPages - 2) pageNum = paginatedData!.totalPages - 4 + i;
+          else pageNum = currentPage - 2 + i;
+          return (
+            <button
+              key={pageNum}
+              onClick={() => handlePageChange(pageNum)}
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg font-semibold text-sm sm:text-base transition-colors ${currentPage === pageNum ? `bg-linear-to-r ${colors.buttonGradient} text-white` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+            >
+              {pageNum}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={!paginatedData!.hasNextPage}
+        className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="w-5 h-5 text-gray-600" />
+      </button>
+
+      <span className="text-xs sm:text-sm text-gray-500 ml-1 sm:ml-4 whitespace-nowrap">{t('page') || 'Page'} {currentPage} / {paginatedData!.totalPages}</span>
+    </div>
+  );
+
   const isLoading = itemsLoading || categoryLoading;
 
   if (isLoading) {
@@ -569,50 +612,21 @@ export default function CategoryPage() {
         )}
 
         {/* TOP PAGINATION */}
-        {paginatedData && paginatedData.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-4 mb-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={!paginatedData.hasPreviousPage}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </button>
-
-            <div className="hidden sm:flex items-center gap-2">
-              {Array.from({ length: Math.min(5, paginatedData.totalPages) }, (_, i) => {
-                let pageNum;
-                if (paginatedData.totalPages <= 5) pageNum = i + 1;
-                else if (currentPage <= 3) pageNum = i + 1;
-                else if (currentPage >= paginatedData.totalPages - 2) pageNum = paginatedData.totalPages - 4 + i;
-                else pageNum = currentPage - 2 + i;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`w-10 h-10 rounded-lg font-semibold transition-colors ${currentPage === pageNum ? `bg-gradient-to-r ${colors.buttonGradient} text-white` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!paginatedData.hasNextPage}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-5 h-5 text-gray-600" />
-            </button>
-
-            <span className="text-sm text-gray-500 ml-2 sm:ml-4 whitespace-nowrap">{t('page') || 'Page'} {currentPage} / {paginatedData.totalPages}</span>
-          </div>
-        )}
+        {paginatedData && paginatedData.totalPages > 1 && renderPagination("mb-4")}
 
         {/* LİSTE */}
         <div className="grid grid-cols-1 gap-4 z-0">
+          {localItems.length > 0 && (
+            <Link
+              href={`/add?category=${currentCategoryKey}`}
+              className={`bg-white/60 p-6 rounded-xl border-2 border-dashed ${colors.borderLight} hover:${colors.border} hover:bg-white transition-all flex items-center justify-center gap-3 min-h-[120px] group`}
+            >
+              <div className={`p-3 rounded-full ${colors.primaryLight} transition-colors`}>
+                <Plus className={`w-6 h-6 ${colors.primary}`} />
+              </div>
+              <span className={`${colors.primary} font-semibold text-lg`}>{t('addNew')}</span>
+            </Link>
+          )}
           {localItems.map((item) => (
             <div
               key={item.id}
@@ -748,17 +762,7 @@ export default function CategoryPage() {
             </div>
           ))}
 
-          {localItems.length > 0 && (
-            <Link
-              href={`/add?category=${currentCategoryKey}`}
-              className={`bg-white/60 p-6 rounded-xl border-2 border-dashed ${colors.borderLight} hover:${colors.border} hover:bg-white transition-all flex items-center justify-center gap-3 min-h-[120px] group`}
-            >
-              <div className={`p-3 rounded-full ${colors.primaryLight} transition-colors`}>
-                <Plus className={`w-6 h-6 ${colors.primary}`} />
-              </div>
-              <span className={`${colors.primary} font-semibold text-lg`}>{t('addNew')}</span>
-            </Link>
-          )}
+
 
           {localItems.length === 0 && !isLoading && (
             <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center">
@@ -778,48 +782,8 @@ export default function CategoryPage() {
           )}
         </div>
 
-        {/* PAGINATION */}
-        {paginatedData && paginatedData.totalPages > 1 && (
-          <div className="flex items-center justify-center gap-4 mt-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={!paginatedData.hasPreviousPage}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </button>
-
-            <div className="flex items-center gap-2">
-              {Array.from({ length: Math.min(5, paginatedData.totalPages) }, (_, i) => {
-                let pageNum;
-                if (paginatedData.totalPages <= 5) pageNum = i + 1;
-                else if (currentPage <= 3) pageNum = i + 1;
-                else if (currentPage >= paginatedData.totalPages - 2) pageNum = paginatedData.totalPages - 4 + i;
-                else pageNum = currentPage - 2 + i;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`w-10 h-10 rounded-lg font-semibold transition-colors ${currentPage === pageNum ? `bg-gradient-to-r ${colors.buttonGradient} text-white` : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!paginatedData.hasNextPage}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-5 h-5 text-gray-600" />
-            </button>
-
-            <span className="text-sm text-gray-500 ml-4">{t('page') || 'Page'} {currentPage} / {paginatedData.totalPages}</span>
-          </div>
-        )}
+        {/* BOTTOM PAGINATION */}
+        {paginatedData && paginatedData.totalPages > 1 && renderPagination("mt-8")}
 
         {/* SAVE BUTTON */}
         {Object.keys(pendingUpdates).length > 0 && (
@@ -839,7 +803,7 @@ export default function CategoryPage() {
       {/* Floating Add Button */}
       <Link
         href={`/add?category=${currentCategoryKey}`}
-        className={`fixed bottom-8 right-8 bg-gradient-to-r ${colors.buttonGradient} text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50`}
+        className={`fixed top-24 right-8 bg-gradient-to-r ${colors.buttonGradient} text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50`}
       >
         <Plus className="w-8 h-8" />
       </Link>
