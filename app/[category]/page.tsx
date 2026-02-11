@@ -20,6 +20,7 @@ import {
   Trash2,
   Download,
   Upload,
+  ArrowRightLeft,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
@@ -76,6 +77,9 @@ export default function CategoryPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkMoveModalOpen, setBulkMoveModalOpen] = useState(false);
+  const [moveToCategoryKey, setMoveToCategoryKey] = useState<string>("");
+  const [isMoving, setIsMoving] = useState(false);
   const [unsavedChangesModalOpen, setUnsavedChangesModalOpen] = useState(false);
 
   const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null);
@@ -113,6 +117,50 @@ export default function CategoryPage() {
       checkAccess();
     }
   }, [categoryData, router, t]);
+
+  // Bulk move handlers
+  const handleBulkMove = () => {
+    if (selectedItems.size === 0) return;
+    setMoveToCategoryKey("");
+    setBulkMoveModalOpen(true);
+  };
+
+  const confirmBulkMove = async () => {
+    if (!moveToCategoryKey || selectedItems.size === 0) return;
+    setIsMoving(true);
+    setBulkMoveModalOpen(false);
+    const idsToMove = Array.from(selectedItems);
+
+    try {
+      const { error } = await supabase
+        .from("items")
+        .update({ category: moveToCategoryKey })
+        .in("id", idsToMove);
+
+      if (error) throw error;
+
+      // Remove moved items from local state
+      setLocalItems(prev => prev.filter(item => !selectedItems.has(item.id)));
+
+      const targetCat = allCategories.find(c => c.key === moveToCategoryKey);
+      const targetName = targetCat?.name || moveToCategoryKey;
+
+      toast.success(
+        `${selectedItems.size} ${'öğe taşındı'} → ${targetName}`
+      );
+
+      setSelectedItems(new Set());
+      setIsSelectionMode(false);
+      invalidateItems(currentCategoryKey);
+      invalidateItems(moveToCategoryKey);
+    } catch (error) {
+      console.error("Bulk move error:", error);
+      toast.error('Taşıma başarısız oldu');
+      invalidateItems(currentCategoryKey);
+    } finally {
+      setIsMoving(false);
+    }
+  };
 
   // Scroll to highlighted item after update
   useEffect(() => {
@@ -499,14 +547,24 @@ export default function CategoryPage() {
                 {t('selectedCount')?.replace('{count}', String(selectedItems.size)) || `${selectedItems.size} seçili`}
               </span>
             </div>
-            <button
-              onClick={handleBulkDelete}
-              disabled={selectedItems.size === 0 || isDeleting}
-              className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.buttonGradient} text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md`}
-            >
-              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {t('bulkDelete')} ({selectedItems.size})
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBulkMove}
+                disabled={selectedItems.size === 0 || isMoving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+              >
+                {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                {'Taşı'} ({selectedItems.size})
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedItems.size === 0 || isDeleting}
+                className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.buttonGradient} text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md`}
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {t('bulkDelete')} ({selectedItems.size})
+              </button>
+            </div>
           </div>
         )}
 
@@ -830,6 +888,48 @@ export default function CategoryPage() {
         onClose={() => setShowBulkImport(false)}
         onSuccess={() => invalidateItems(currentCategoryKey)}
       />
+
+      {/* Bulk Move Modal */}
+      {bulkMoveModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+            <h2 className="text-lg font-bold text-gray-800">
+              {'Kategori Taşı'} ({selectedItems.size} {'öğe'})
+            </h2>
+            <p className="text-sm text-gray-500">
+              {'Seçili öğeleri hangi kategoriye taşımak istiyorsunuz?'}
+            </p>
+            <select
+              value={moveToCategoryKey}
+              onChange={(e) => setMoveToCategoryKey(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            >
+              <option value="">{'Kategori seçin...'}</option>
+              {allCategories
+                .filter(c => c.key !== currentCategoryKey)
+                .map(c => (
+                  <option key={c.key} value={c.key}>{c.name}</option>
+                ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBulkMoveModalOpen(false)}
+                className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={confirmBulkMove}
+                disabled={!moveToCategoryKey || isMoving}
+                className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isMoving ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRightLeft className="w-5 h-5" />}
+                {'Taşı'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
