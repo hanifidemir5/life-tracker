@@ -167,10 +167,9 @@ export default function EditCategoryPage() {
         success: t('profileUpdated'),
         error: t('error'),
       })
-      .then(() => {
-        invalidateCategories();
+      .then(async () => {
+        await invalidateCategories();
         router.push("/");
-        router.refresh();
       })
       .finally(() => setLoading(false));
   };
@@ -201,9 +200,8 @@ export default function EditCategoryPage() {
       }
 
       toast.success(t('success'));
-      invalidateCategories();
+      await invalidateCategories();
       router.push("/");
-      router.refresh();
     } catch (error) {
       console.error("Delete error:", error);
       toast.error(t('error'));

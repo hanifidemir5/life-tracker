@@ -126,9 +126,8 @@ export default function AddCategoryPage() {
       if (error) throw error;
 
       toast.success(t('success'));
-      invalidateCategories();
+      await invalidateCategories();
       router.push("/");
-      router.refresh();
     } catch (error: any) {
       console.error("Full Error Object:", error);
       toast.error(t('error') + ": " + (error.message || "Bir şeyler ters gitti"));

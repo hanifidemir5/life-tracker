@@ -23,6 +23,8 @@ import { toast } from "react-toastify";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { itemSchema, ItemFormData } from "@/app/lib/schemas";
+import { useInvalidateItems } from "@/app/hooks/useItems";
+import { useInvalidateCategories } from "@/app/hooks/useCategories";
 
 type Category = {
   id: number;
@@ -45,6 +47,8 @@ export default function AddItemPage() {
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
   const { colors, isPaired } = useTheme();
+  const invalidateItems = useInvalidateItems();
+  const invalidateCategories = useInvalidateCategories();
   const [analyzingMethod, setAnalyzingMethod] = useState<AnalysisMethod>(null);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -360,8 +364,9 @@ export default function AddItemPage() {
 
       setShowSelectionModal(false);
       setFoundBooks([]);
+      invalidateItems(currentCategoryKey);
+      invalidateCategories();
       router.push(`/${currentCategoryKey}`);
-      router.refresh();
     } catch (error) {
       toast.error(t('saveError'));
     } finally {
@@ -430,8 +435,9 @@ export default function AddItemPage() {
       setPhotoPreviews([]);
 
       toast.success(t('added'));
+      invalidateItems(data.category);
+      invalidateCategories();
       router.push(`/${data.category}`);
-      router.refresh();
     } catch {
       toast.error(t('error'));
     } finally {
