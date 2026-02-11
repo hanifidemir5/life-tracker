@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Globe, LogOut, Users, BookOpen, Menu, X, Home } from "lucide-react";
+import { Globe, LogOut, Users, BookOpen, Menu, X, Home, Loader2 } from "lucide-react";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { logout } from "@/app/actions/auth";
@@ -14,11 +14,13 @@ export default function Header() {
     const { t, language, setLanguage } = useLanguage();
     const { isPaired } = useTheme();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     // Hide header on login page
     if (pathname === "/login") return null;
 
     const handleLogout = async () => {
+        setLoggingOut(true);
         await logout();
     };
 
@@ -53,10 +55,11 @@ export default function Header() {
 
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-600 rounded-full hover:bg-gray-100 transition-all font-bold text-sm border-2 border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl"
+                        disabled={loggingOut}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-600 rounded-full hover:bg-gray-100 transition-all font-bold text-sm border-2 border-gray-200 hover:border-gray-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                         title={t('logout')}
                     >
-                        <LogOut className="w-5 h-5" />
+                        {loggingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
                         <span>{t('logout')}</span>
                     </button>
 
@@ -112,9 +115,10 @@ export default function Header() {
 
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-5 py-4 text-gray-600 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                            disabled={loggingOut}
+                            className="w-full flex items-center gap-3 px-5 py-4 text-gray-600 hover:bg-gray-50 transition-colors border-b border-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <LogOut className="w-5 h-5" />
+                            {loggingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
                             <span className="font-semibold">{t('logout')}</span>
                         </button>
 
