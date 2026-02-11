@@ -30,6 +30,7 @@ import { useItems, useInvalidateItems, useAllItems, Item, ITEMS_PER_PAGE } from 
 import { useCategories, useCategoryByKey, Category } from "@/app/hooks/useCategories";
 import { itemsToCSV, itemsToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
 import ConfirmModal from "@/app/components/ConfirmModal";
+import BulkImportModal from "@/app/components/BulkImportModal";
 
 export default function CategoryPage() {
   const params = useParams();
@@ -79,9 +80,8 @@ export default function CategoryPage() {
 
   const [pendingCategoryChange, setPendingCategoryChange] = useState<string | null>(null);
 
-  // Import state
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isImporting, setIsImporting] = useState(false);
+  // Bulk import modal state
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   // React Query hooks
   const { data: paginatedData, isLoading: itemsLoading } = useItems(currentCategoryKey, currentPage);
@@ -259,69 +259,6 @@ export default function CategoryPage() {
     setIsExportDropdownOpen(false);
   };
 
-  // Import Handlers
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== "application/json" && !file.name.endsWith(".json")) {
-      toast.error(t('invalidFile'));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        setIsImporting(true);
-        const jsonText = event.target?.result as string;
-        const data = JSON.parse(jsonText);
-
-        if (!data.items || !Array.isArray(data.items)) {
-          toast.error(t('invalidFile'));
-          return;
-        }
-
-        // Prepare items for insertion
-        const itemsToInsert = data.items.map((item: any) => ({
-          category_key: currentCategoryKey,
-          title: item.title,
-          description: item.description,
-          status: item.status || false,
-          user_id: currentUserId,
-          owner: item.owner || t('defaultOwner'),
-          image_urls: item.image_urls || []
-        }));
-
-        if (itemsToInsert.length === 0) {
-          toast.info(t('listEmpty'));
-          setIsImporting(false);
-          return;
-        }
-
-        const { error } = await supabase.from("items").insert(itemsToInsert);
-
-        if (error) throw error;
-
-        toast.success(t('importSuccess'));
-        invalidateItems(currentCategoryKey);
-
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-
-      } catch (error) {
-        console.error("Import error:", error);
-        toast.error(t('importError'));
-      } finally {
-        setIsImporting(false);
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= (paginatedData?.totalPages || 1)) {
@@ -457,21 +394,13 @@ export default function CategoryPage() {
             </button>
 
             {/* IMPORT BUTTON */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImportFile}
-              accept=".json"
-              style={{ display: "none" }}
-            />
             <button
-              onClick={handleImportClick}
-              disabled={isImporting}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium ${isImporting ? "opacity-50 cursor-not-allowed" : ""}`}
+              onClick={() => setShowBulkImport(true)}
+              className={`hidden md:flex items-center gap-2 px-4 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium`}
               title={t('importData')}
             >
-              <Upload className={`w-4 h-4 ${isImporting ? "animate-bounce" : ""}`} />
-              <span className="hidden sm:inline">{isImporting ? t('importing') : t('importData')}</span>
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('importData')}</span>
             </button>
 
             {/* EXPORT DROPDOWN */}
@@ -892,6 +821,14 @@ export default function CategoryPage() {
         confirmText={t('leaveAnyway') || 'Yine de Çık'}
         cancelText={t('stay') || 'Kal'}
         type="warning"
+      />
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        categoryKey={currentCategoryKey}
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onSuccess={() => invalidateItems(currentCategoryKey)}
       />
     </main>
   );
