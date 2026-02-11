@@ -9,13 +9,6 @@ import {
   Save,
   X,
   Loader2,
-  Camera,
-  Sparkles,
-  CheckSquare,
-  Square,
-  ClipboardList,
-  ArrowRight,
-  FileSpreadsheet,
   ImagePlus,
   Trash2,
 } from "lucide-react";
@@ -24,23 +17,7 @@ import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { itemSchema, ItemFormData } from "@/app/lib/schemas";
 import { useInvalidateItems } from "@/app/hooks/useItems";
-import { useInvalidateCategories } from "@/app/hooks/useCategories";
-
-type Category = {
-  id: number;
-  key: string;
-  name: string;
-  is_owner_required?: boolean;
-};
-
-type ScannedBook = {
-  title: string;
-  description: string;
-  isExists?: boolean;
-  image_url?: string;
-};
-
-type AnalysisMethod = "camera" | "text" | "csv" | null;
+import { useInvalidateCategories, useCategories, Category } from "@/app/hooks/useCategories";
 
 export default function AddItemPage() {
   const router = useRouter();
@@ -49,19 +26,7 @@ export default function AddItemPage() {
   const { colors, isPaired } = useTheme();
   const invalidateItems = useInvalidateItems();
   const invalidateCategories = useInvalidateCategories();
-  const [analyzingMethod, setAnalyzingMethod] = useState<AnalysisMethod>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  // Modallar
-  const [showSelectionModal, setShowSelectionModal] = useState(false);
-  const [showTextModal, setShowTextModal] = useState(false);
-
-  const [foundBooks, setFoundBooks] = useState<ScannedBook[]>([]);
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(
-    new Set()
-  );
-
-  const [listText, setListText] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // React Hook Form
   const {
@@ -97,6 +62,12 @@ export default function AddItemPage() {
   const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
   const [currentUserProfile, setCurrentUserProfile] = useState<{ id: string; name: string } | null>(null);
 
+  const searchParams = useSearchParams();
+  const preSelectedCategory = searchParams.get("category");
+
+  // Use React Query for categories
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories(currentUserId);
+
   // --- KATEGORİYE GÖRE OWNER ZORUNLULUĞU ---
   // Seçili kategorinin 'is_owner_required' özelliğini bul
   const selectedCategoryObj = categories.find(c => c.key === currentCategoryKey);
@@ -105,28 +76,17 @@ export default function AddItemPage() {
   // Butonların aktif/pasif durumunu kontrol eden mantık
   const isActionDisabled = isOwnerRequired && !currentOwner;
 
-  const searchParams = useSearchParams();
-  const preSelectedCategory = searchParams.get("category");
-
   useEffect(() => {
     const initData = async () => {
-      // 1. Kategorileri Çek
-      const { data: catData } = await supabase.from("categories").select("*");
-      if (catData) {
-        setCategories(catData);
-        if (preSelectedCategory) {
-          const exists = catData.find((c) => c.key === preSelectedCategory);
-          if (exists) {
-            setValue("category", preSelectedCategory);
-          }
-        } else if (catData.length > 0 && !currentCategoryKey) {
-          setValue("category", catData[0].key);
-        }
+      // 1. Pre-select category from URL if provided
+      if (preSelectedCategory) {
+        setValue("category", preSelectedCategory);
       }
 
       // 2. Profilleri Çek
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setCurrentUserId(user.id);
 
       // Kendi Profilim
       const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).maybeSingle();
@@ -155,231 +115,7 @@ export default function AddItemPage() {
     initData();
   }, [preSelectedCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const stopAnalyzing = () => {
-    setAnalyzingMethod(null);
-  };
 
-  const handleProcessResults = async (allBooks: ScannedBook[]) => {
-    // 1. Veritabanındaki mevcut kitapları kontrol et
-    const { data: existingItems } = await supabase
-      .from("items")
-      .select("title")
-      .eq("category", currentCategoryKey);
-
-    // Set haline getir (küçük harf ile)
-    const existingTitles = new Set((existingItems || []).map(i => i.title.trim().toLowerCase()));
-
-    // 2. Taranan kitapları işaretle
-    const processedBooks = allBooks.map(book => ({
-      ...book,
-      isExists: existingTitles.has(book.title.trim().toLowerCase())
-    }));
-
-    setFoundBooks(processedBooks);
-
-    // 3. Sadece VERİTABANINDA OLMAYANLARI seçili yap
-    const newIndices = new Set<number>();
-    processedBooks.forEach((book, idx) => {
-      if (!book.isExists) {
-        newIndices.add(idx);
-      }
-    });
-
-    // Eğer hepsi zaten varsa, yine de modalı aç ama uyarı ver
-    toast.info(t('allItemsRegistered'));
-
-    setSelectedIndices(newIndices);
-    setShowSelectionModal(true);
-  };
-
-  // --- 1. KAMERA ---
-  const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    setAnalyzingMethod("camera");
-    const formDataUpload = new FormData();
-    formDataUpload.append("image", file);
-    formDataUpload.append("category", currentCategoryKey);
-
-    try {
-      toast.info((t('scanningImage') as string) + " 🤖", { autoClose: 3000 });
-      const response = await fetch("/api/scan-books", {
-        method: "POST",
-        body: formDataUpload,
-      });
-
-      if (response.status === 429) {
-        toast.warn(t('serverBusy') || "Sunucu şu an çok yoğun, lütfen 1 dakika bekleyip tekrar deneyin.");
-        throw new Error("Rate limit exceeded");
-      }
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-
-      handleProcessResults(data.books);
-    } catch (error: any) {
-      console.error(error);
-      if (error.message !== "Rate limit exceeded") {
-        toast.error(t('errorOccurred'));
-      }
-    } finally {
-      stopAnalyzing();
-      e.target.value = "";
-    }
-  };
-
-  // --- 2. LİSTE (METİN) ---
-  const handleProcessList = async () => {
-    if (!listText.trim()) {
-      toast.warn(t('pleasePasteList'));
-      return;
-    }
-    setShowTextModal(false);
-    processTextContent(listText, "text");
-  };
-
-  // --- 3. CSV ---
-  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      if (text) {
-        processTextContent(text, "csv");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const processTextContent = async (text: string, method: AnalysisMethod) => {
-    setAnalyzingMethod(method);
-    try {
-      toast.info(t('processingList'), { autoClose: 3000 });
-      const response = await fetch("/api/process-list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-
-      handleProcessResults(data.books);
-    } catch (error) {
-      console.error(error);
-      toast.error(t('processingFailed'));
-    } finally {
-      stopAnalyzing();
-    }
-  };
-
-  // --- TOPLU KAYDETME (Bulk Add) ---
-  const handleSaveSelectedBooks = async () => {
-    if (selectedIndices.size === 0) return;
-    setLoading(true);
-
-    const selectedCat = categories.find(c => c.key === currentCategoryKey);
-    const currentIsOwnerRequired = selectedCat ? selectedCat.is_owner_required : false;
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast.error(t('loginRequired'));
-        setLoading(false);
-        return;
-      }
-
-      const { data: existingItems } = await supabase
-        .from("items")
-        .select("title")
-        .eq("category", currentCategoryKey);
-
-      const existingTitles = new Set((existingItems || []).map(i => i.title.toLowerCase()));
-
-      const booksToInsert: any[] = [];
-      let duplicateCount = 0;
-      let validationErrors = 0;
-
-      foundBooks.forEach((book, index) => {
-        if (selectedIndices.has(index)) {
-          if (existingTitles.has(book.title.toLowerCase())) {
-            duplicateCount++;
-          } else {
-            // Validate against schema
-            const candidateData = {
-              title: book.title.substring(0, 100), // Truncate to match schema max
-              category: currentCategoryKey,
-              description: book.description,
-              status: false,
-              owner: currentIsOwnerRequired ? currentOwner || undefined : undefined,
-            };
-
-            const validation = itemSchema.safeParse(candidateData);
-
-            if (validation.success) {
-              booksToInsert.push({
-                ...candidateData,
-                owner: currentIsOwnerRequired ? currentOwner : null, // DB expects null/string, schema optional
-                user: user.id,
-                image_urls: book.image_url ? [book.image_url] : null,
-                created_at: new Date().toISOString(),
-              });
-            } else {
-              console.error("Validation failed for:", book.title, validation.error);
-              validationErrors++;
-            }
-          }
-        }
-      });
-
-      if (booksToInsert.length === 0 && duplicateCount === 0 && validationErrors > 0) {
-        toast.error(`${validationErrors} ${t('saveError')}`);
-        setLoading(false);
-        return;
-      }
-
-      if (booksToInsert.length === 0 && duplicateCount > 0) {
-        toast.warning(t('allItemsInList'));
-        setLoading(false);
-        return;
-      }
-
-      if (booksToInsert.length > 0) {
-        const { error } = await supabase.from("items").insert(booksToInsert);
-        if (error) throw error;
-      }
-
-      const successMsg = booksToInsert.length > 0 ? `${booksToInsert.length} ${t('itemsAdded')}` : "";
-      const skipMsg = duplicateCount > 0 ? `${duplicateCount} ${t('duplicatesSkipped')}` : "";
-
-      if (duplicateCount > 0) {
-        toast.info(`${successMsg} ${skipMsg}`);
-      } else {
-        toast.success(`${successMsg} 🎉`);
-      }
-
-      setShowSelectionModal(false);
-      setFoundBooks([]);
-      invalidateItems(currentCategoryKey);
-      invalidateCategories();
-      router.push(`/${currentCategoryKey}`);
-    } catch (error) {
-      toast.error(t('saveError'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleBookSelection = (index: number) => {
-    const newSelection = new Set(selectedIndices);
-    if (newSelection.has(index)) newSelection.delete(index);
-    else newSelection.add(index);
-    setSelectedIndices(newSelection);
-  };
 
   // --- MANUEL KAYDETME ---
   const onSubmit = async (data: ItemFormData) => {
@@ -445,14 +181,7 @@ export default function AddItemPage() {
     }
   };
 
-  const handleSpecialActionClick = (e: React.MouseEvent, action: () => void) => {
-    if (isActionDisabled) {
-      e.preventDefault();
-      toast.warn(t('ownerRequiredWarn'));
-    } else {
-      action();
-    }
-  };
+
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -509,139 +238,6 @@ export default function AddItemPage() {
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className={`bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-2xl border-2 ${colors.borderLight} relative overflow-hidden`}>
-        {/* GLOBAL LOADER */}
-        {analyzingMethod !== null && (
-          <div className="absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-6 animate-in fade-in">
-            <Sparkles className="w-12 h-12 text-purple-600 animate-pulse mb-4" />
-            <h2 className="text-xl font-bold text-gray-800">
-              {t('aiWorking')}
-            </h2>
-            <p className="text-gray-500 mt-2">
-              {analyzingMethod === "camera" && t('scanningImage')}
-              {analyzingMethod === "csv" && t('readingCsv')}
-              {analyzingMethod === "text" && t('analyzingList')}
-            </p>
-          </div>
-        )}
-
-        {/* --- MODALS --- */}
-        {showTextModal && (
-          <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-gray-800">
-                {t('pasteList')}
-              </h2>
-              <button onClick={() => setShowTextModal(false)}>
-                <X className="w-6 h-6 text-gray-400" />
-              </button>
-            </div>
-            <textarea
-              value={listText}
-              onChange={(e) => setListText(e.target.value)}
-              placeholder={t('listPlaceholder')}
-              className="flex-1 w-full border text-gray-800 border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none mb-4 text-sm"
-            />
-            <button
-              onClick={handleProcessList}
-              className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 flex items-center justify-center gap-2"
-            >
-              {t('analyze')} <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-
-        {showSelectionModal && (
-          <div className="absolute inset-0 bg-white z-40 flex flex-col p-6 animate-in slide-in-from-bottom-10">
-            <div className="flex justify-between items-center mb-4 border-b pb-4">
-              <h2 className="text-lg font-bold text-gray-800">
-                {t('itemsToAdd')} ({foundBooks.length})
-              </h2>
-              <button
-                onClick={() => setShowSelectionModal(false)}
-                className="text-gray-400 hover:text-red-500"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-              {foundBooks.map((book, idx) => {
-                const isSelected = selectedIndices.has(idx);
-                const isAlreadyAdded = book.isExists;
-
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      if (!isAlreadyAdded) toggleBookSelection(idx);
-                    }}
-                    className={`p-3 rounded-lg border flex items-start gap-3 transition-all ${isAlreadyAdded
-                      ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
-                      : isSelected
-                        ? "border-blue-500 bg-blue-50 cursor-pointer"
-                        : "border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      }`}
-                  >
-                    <div className="mt-1">
-                      {isAlreadyAdded ? (
-                        <div className="w-5 h-5 flex items-center justify-center bg-gray-300 rounded text-white text-[10px] font-bold">✓</div>
-                      ) : isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-blue-600" />
-                      ) : (
-                        <Square className="w-5 h-5 text-gray-300" />
-                      )}
-                    </div>
-
-                    {/* Image Preview */}
-                    {book.image_url && (
-                      <img
-                        src={book.image_url}
-                        alt={book.title}
-                        className="w-12 h-16 object-cover rounded-md border border-gray-200"
-                      />
-                    )}
-
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-semibold text-gray-800 text-sm">
-                          {book.title}
-                        </h3>
-                        {isAlreadyAdded && (
-                          <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                            {t('alreadyExistsBadge')}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        {book.description}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSelectionModal(false)}
-                className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={handleSaveSelectedBooks}
-                disabled={loading || selectedIndices.size === 0}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin w-5 h-5" />
-                ) : (
-                  <Save className="w-5 h-5" />
-                )}
-                {t('save')} ({selectedIndices.size})
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* --- HEADER --- */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{t('addItem')}</h1>
@@ -676,6 +272,9 @@ export default function AddItemPage() {
               }}
               disabled={!!preSelectedCategory}
             >
+              {!preSelectedCategory && (
+                <option value="">{categoriesLoading ? 'Yükleniyor...' : t('selectCategoryDropdown') || 'Kategori Seçin...'}</option>
+              )}
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.key}>
                   {cat.name}
@@ -749,79 +348,6 @@ export default function AddItemPage() {
             </div>
           )}
 
-          {/* SPECIAL ACTION BUTTONS */}
-          <div className="grid grid-cols-3 gap-2">
-            <label
-              onClick={(e) => handleSpecialActionClick(e, () => { })}
-              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-linear-to-br from-purple-500 to-indigo-600"
-                }`}
-            >
-              {analyzingMethod === "camera" ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Camera className="w-5 h-5" />
-              )}
-              <span className="text-xs font-bold">{t('camera')}</span>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleScanImage}
-                disabled={analyzingMethod !== null || isActionDisabled}
-              />
-            </label>
-
-            <button
-              onClick={(e) =>
-                handleSpecialActionClick(e, () => setShowTextModal(true))
-              }
-              disabled={analyzingMethod !== null || isActionDisabled}
-              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-linear-to-br from-pink-500 to-rose-600"
-                }`}
-            >
-              {analyzingMethod === "text" ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <ClipboardList className="w-5 h-5" />
-              )}
-              <span className="text-xs font-bold">{t('paste')}</span>
-            </button>
-
-            <label
-              onClick={(e) => handleSpecialActionClick(e, () => { })}
-              className={`flex flex-col items-center justify-center gap-2 p-3 text-white rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all text-center ${isActionDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-linear-to-br from-emerald-500 to-teal-600"
-                }`}
-            >
-              {analyzingMethod === "csv" ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="w-5 h-5" />
-              )}
-              <span className="text-xs font-bold">{t('csv')}</span>
-              <input
-                type="file"
-                accept=".csv,.txt"
-                className="hidden"
-                onChange={handleCsvUpload}
-                disabled={analyzingMethod !== null || isActionDisabled}
-              />
-            </label>
-          </div>
-
-          <div className="flex items-center gap-4 my-2">
-            <div className="h-px bg-gray-200 flex-1"></div>
-            <span className="text-xs text-gray-400 font-medium">
-              {t('orEnterManually')}
-            </span>
-            <div className="h-px bg-gray-200 flex-1"></div>
-          </div>
 
           {/* MANUEL FORM */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 text-black">
