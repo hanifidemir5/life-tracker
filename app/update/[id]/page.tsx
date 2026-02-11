@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { itemSchema, ItemFormData } from "@/app/lib/schemas";
+import { useInvalidateItems } from "@/app/hooks/useItems";
 
 type Category = {
   id: number;
@@ -36,6 +37,7 @@ export default function UpdateItemPage() {
   const itemId = params.id;
   const { t } = useLanguage();
   const { colors, isPaired } = useTheme();
+  const invalidateItems = useInvalidateItems();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -120,14 +122,14 @@ export default function UpdateItemPage() {
         // 2. Profilleri Çek
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).single();
+          const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).maybeSingle();
           const myName = myProfile?.display_name || "Me";
           const profileList = [{ id: user.id, name: myName }];
 
           const { data: coupleData } = await supabase.from("couples").select("*").or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`).maybeSingle();
           if (coupleData) {
             const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id;
-            const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).single();
+            const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).maybeSingle();
             if (partnerProfile) profileList.push({ id: partnerId, name: partnerProfile.display_name });
           }
           setProfiles(profileList);
@@ -215,8 +217,8 @@ export default function UpdateItemPage() {
 
       // Smart redirect: Go to the category page and highlight the updated item
       const page = searchParams.get('page') || '1';
+      invalidateItems(data.category);
       router.push(`/${data.category}?page=${page}&highlightItem=${itemId}`);
-      router.refresh();
     } catch (error) {
       toast.error(t('updateFailed'));
     } finally {
@@ -230,8 +232,8 @@ export default function UpdateItemPage() {
       const { error } = await supabase.from("items").delete().eq("id", itemId);
       if (error) throw error;
       toast.info(t('itemDeleted'));
+      invalidateItems();
       router.back();
-      router.refresh();
     } catch (error) {
       toast.error(t('deletionFailed'));
     } finally {

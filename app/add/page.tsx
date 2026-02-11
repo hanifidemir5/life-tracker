@@ -129,7 +129,7 @@ export default function AddItemPage() {
       if (!user) return;
 
       // Kendi Profilim
-      const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).single();
+      const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).maybeSingle();
       const myName = myProfile?.display_name || "Me";
       setCurrentUserProfile({ id: user.id, name: myName });
 
@@ -144,7 +144,7 @@ export default function AddItemPage() {
 
       if (coupleData) {
         const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id;
-        const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).single();
+        const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).maybeSingle();
         const partnerName = partnerProfile?.display_name || "Partner";
         profileList.push({ id: partnerId, name: partnerName });
       }
