@@ -138,7 +138,7 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center bg-linear-to-br from-pink-50 via-rose-50 to-red-50 p-4">
+        <main className="bg-gradient-auth min-h-screen flex items-center justify-center p-6">
             {/* SUCCESS MODAL (Kayıt Başarılı) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -147,29 +147,28 @@ export default function LoginPage() {
                             <CheckCircle className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                            Kayıt Başarılı!
+                            {t('registrationSuccessTitle')}
                         </h2>
                         <p className="text-gray-600 mb-6">
-                            Lütfen hesabınızı etkinleştirmek için email adresinize gönderilen
-                            bağlantıya tıklayın.
+                            {t('registrationSuccessDesc')}
                         </p>
 
                         <a
                             href="https://mail.google.com"
                             target="_blank"
                             rel="noreferrer"
-                            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-xl mb-3 flex items-center justify-center gap-2"
+                            className="w-full bg-[#991B1B] hover:bg-[#7C2D12] text-white font-semibold py-3 rounded-2xl mb-3 flex items-center justify-center gap-2 transition-all"
                         >
                             <Mail className="w-5 h-5" />
-                            Gmail'i Aç
+                            {t('openGmail')}
                         </a>
 
                         <button
                             onClick={() => {
                                 setShowSuccessModal(false);
-                                setIsLogin(true); // Login ekranına dön
+                                setIsLogin(true);
                             }}
-                            className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl"
+                            className="block w-full bg-violet-50 hover:bg-violet-100 text-slate-700 font-semibold py-3 rounded-2xl transition-colors"
                         >
                             Giriş Yap
                         </button>
@@ -181,31 +180,36 @@ export default function LoginPage() {
             {forgotPasswordMode && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
-                        <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Mail className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                            Şifremi Unuttum
+                            {t('forgotPasswordTitle')}
                         </h2>
                         <p className="text-gray-600 mb-6">
-                            Email adresinizi girin, size şifre sıfırlama bağlantısı gönderelim.
+                            {t('forgotPasswordDesc')}
                         </p>
 
-                        <input
-                            type="email"
-                            value={resetEmail}
-                            onChange={(e) => setResetEmail(e.target.value)}
-                            placeholder="ornek@email.com"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder-gray-400 mb-4"
-                        />
+                        <div className="relative group mb-4">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <Mail className="w-4 h-4 text-violet-300 group-focus-within:text-[#991B1B] transition-colors" />
+                            </div>
+                            <input
+                                type="email"
+                                value={resetEmail}
+                                onChange={(e) => setResetEmail(e.target.value)}
+                                placeholder="ornek@email.com"
+                                className="w-full pl-11 pr-4 py-3.5 bg-white/70 border border-violet-100 rounded-2xl focus:ring-2 focus:ring-[#991B1B] focus:border-[#991B1B] outline-none transition-all text-gray-900 placeholder-gray-400"
+                            />
+                        </div>
 
                         <button
                             onClick={handleForgotPassword}
                             disabled={sendingReset}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl mb-3 flex items-center justify-center gap-2 disabled:opacity-70"
+                            className="w-full bg-[#991B1B] hover:bg-[#7C2D12] text-white font-semibold py-3.5 rounded-2xl mb-3 flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg shadow-[#991B1B]/20 transition-all"
                         >
                             {sendingReset && <Loader2 className="w-5 h-5 animate-spin" />}
-                            {sendingReset ? "Gönderiliyor..." : "Bağlantı Gönder"}
+                            {sendingReset ? t('sending') : t('sendLink')}
                         </button>
 
                         <button
@@ -213,210 +217,248 @@ export default function LoginPage() {
                                 setForgotPasswordMode(false);
                                 setResetEmail("");
                             }}
-                            className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl"
+                            className="block w-full bg-violet-50 hover:bg-violet-100 text-slate-700 font-semibold py-3 rounded-2xl transition-colors"
                         >
-                            İptal
+                            {t('cancel')}
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* EMAIL CONFIRM MODAL (Login Hatası) */}
+            {/* EMAIL CONFIRM MODAL */}
             {showEmailConfirmModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
-                        <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Mail className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                            Email Doğrulanmadı
+                            {t('emailUnverifiedTitle')}
                         </h2>
                         <p className="text-gray-600 mb-6">
-                            Giriş yapabilmek için lütfen email adresinize gönderilen doğrulama
-                            bağlantısına tıklayın.
+                            {t('emailUnverifiedDesc')}
                         </p>
 
                         <a
                             href="https://mail.google.com"
                             target="_blank"
                             rel="noreferrer"
-                            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-xl mb-3 flex items-center justify-center gap-2"
+                            className="w-full bg-[#991B1B] hover:bg-[#7C2D12] text-white font-semibold py-3 rounded-2xl mb-3 flex items-center justify-center gap-2 transition-all"
                         >
                             <Mail className="w-5 h-5" />
-                            Gmail'i Kontrol Et
+                            {t('checkGmail')}
                         </a>
 
                         <button
                             onClick={() => setShowEmailConfirmModal(false)}
-                            className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl"
+                            className="block w-full bg-violet-50 hover:bg-violet-100 text-slate-700 font-semibold py-3 rounded-2xl transition-colors"
                         >
-                            Tamam
+                            {t('ok')}
                         </button>
                     </div>
                 </div>
             )}
 
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-pink-100 transition-all">
-                <div className="p-8">
-                    <div className="text-center mb-8">
-                        <div className="flex justify-center mb-4 relative h-16 w-24 mx-auto">
-                            <Heart className="absolute bottom-0 left-4 w-10 h-10 text-rose-600 fill-current animate-pulse" />
-                            <Heart className="absolute top-0 right-4 w-7 h-7 text-pink-400 fill-current animate-pulse delay-75" />
+            <div className="w-full max-w-md space-y-8">
+                {/* Hero Section */}
+                <div className="text-center space-y-4">
+                    <div className="relative inline-block">
+                        <div className="bg-violet-200/60 p-5 rounded-full inline-flex items-center justify-center mb-2">
+                            <Heart className="w-9 h-9 text-[#991B1B] fill-current" />
                         </div>
-                        <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-2">
-                            {language === 'tr' ? "HeartSync'e Hoşgeldiniz" : "Welcome to HeartSync"}
-                        </h1>
+                        <Heart className="w-4 h-4 text-[#991B1B]/40 fill-current absolute -top-1 -right-2" />
+                        <Heart className="w-3 h-3 text-violet-500/60 fill-current absolute top-4 -left-3" />
                     </div>
+                    <h1 className="text-4xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "'Playfair Display', serif" }}>
+                        {t('heartSyncWelcome')} <br />
+                        <span className="italic text-[#991B1B]">{t('heartSyncWelcomeSpan')}</span>
+                    </h1>
+                    <p className="text-slate-500 font-light max-w-xs mx-auto">
+                        {t('heartSyncSubtitle')}
+                    </p>
+                </div>
 
+                {/* Glass Card Form */}
+                <div className="glass-card p-8 rounded-2xl soft-shadow space-y-6">
                     <form
                         onSubmit={handleSubmit(onSubmit)}
-                        className="space-y-4"
+                        className="space-y-5"
                         noValidate
                     >
+                        {/* Full Name (Register only) */}
                         {!isLogin && (
-                            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="space-y-2">
                                 <label
                                     htmlFor="fullName"
-                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                    className="block text-sm font-medium text-slate-700 ml-1"
                                 >
-                                    Ad Soyad
+                                    {t('fullName')}
                                 </label>
-                                <input
-                                    id="fullName"
-                                    type="text"
-                                    className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all placeholder-gray-400 text-gray-900
-                                        ${errors.fullName
-                                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                                            : "border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"}`}
-                                    placeholder="Adınız Soyadınız"
-                                    {...register("fullName")}
-                                />
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Heart className="w-4 h-4 text-violet-300 group-focus-within:text-[#991B1B] transition-colors" />
+                                    </div>
+                                    <input
+                                        id="fullName"
+                                        type="text"
+                                        className={`block w-full pl-11 pr-4 py-3.5 bg-white/70 border rounded-2xl focus:ring-2 focus:ring-[#991B1B] focus:border-[#991B1B] outline-none transition-all text-slate-900 placeholder:text-slate-400
+                                            ${errors.fullName
+                                                ? "border-red-400"
+                                                : "border-violet-100"}`}
+                                        placeholder={t('fullName')}
+                                        {...register("fullName")}
+                                    />
+                                </div>
                                 {errors.fullName && (
-                                    <p className="mt-1 text-xs text-red-500">{errors.fullName.message}</p>
+                                    <p className="text-xs text-red-500 ml-1">{errors.fullName.message}</p>
                                 )}
                             </div>
                         )}
 
-                        <div>
+                        {/* Email */}
+                        <div className="space-y-2">
                             <label
                                 htmlFor="email"
-                                className="block text-sm font-medium text-gray-700 mb-1"
+                                className="block text-sm font-medium text-slate-700 ml-1"
                             >
-                                Email
+                                {t('email')}
                             </label>
-                            <input
-                                id="email"
-                                type="email"
-                                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all placeholder-gray-400 text-gray-900
-                                    ${errors.email
-                                        ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                                        : "border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"}`}
-                                placeholder="ornek@email.com"
-                                {...register("email")}
-                            />
-                            {errors.email && (
-                                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label
-                                htmlFor="password"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Şifre
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all placeholder-gray-400 text-gray-900
-                                    ${errors.password
-                                        ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                                        : "border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"}`}
-                                placeholder="********"
-                                {...register("password")}
-                            />
-                            {errors.password && (
-                                <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-                            )}
-                        </div>
-
-                        {/* Forgot Password Link - Only show on login */}
-                        {isLogin && (
-                            <div className="text-right -mt-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setForgotPasswordMode(true)}
-                                    className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
-                                >
-                                    Şifremi Unuttum
-                                </button>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Mail className="w-4 h-4 text-violet-300 group-focus-within:text-[#991B1B] transition-colors" />
+                                </div>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    className={`block w-full pl-11 pr-4 py-3.5 bg-white/70 border rounded-2xl focus:ring-2 focus:ring-[#991B1B] focus:border-[#991B1B] outline-none transition-all text-slate-900 placeholder:text-slate-400
+                                        ${errors.email
+                                            ? "border-red-400"
+                                            : "border-violet-100"}`}
+                                    placeholder="ornek@email.com"
+                                    {...register("email")}
+                                />
                             </div>
-                        )}
+                            {errors.email && (
+                                <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>
+                            )}
+                        </div>
 
+                        {/* Password */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center ml-1">
+                                <label
+                                    htmlFor="password"
+                                    className="block text-sm font-medium text-slate-700"
+                                >
+                                    {t('password')}
+                                </label>
+                                {isLogin && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setForgotPasswordMode(true)}
+                                        className="text-xs text-violet-600 hover:text-[#991B1B] font-medium transition-colors"
+                                    >
+                                        {t('forgotPasswordTitle')}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-violet-300 group-focus-within:text-[#991B1B] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path></svg>
+                                </div>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    className={`block w-full pl-11 pr-4 py-3.5 bg-white/70 border rounded-2xl focus:ring-2 focus:ring-[#991B1B] focus:border-[#991B1B] outline-none transition-all text-slate-900 placeholder:text-slate-400
+                                        ${errors.password
+                                            ? "border-red-400"
+                                            : "border-violet-100"}`}
+                                    placeholder="••••••••"
+                                    {...register("password")}
+                                />
+                            </div>
+                            {errors.password && (
+                                <p className="text-xs text-red-500 ml-1">{errors.password.message}</p>
+                            )}
+                        </div>
+
+                        {/* Confirm Password (Register only) */}
                         {!isLogin && (
-                            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="space-y-2">
                                 <label
                                     htmlFor="confirmPassword"
-                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                    className="block text-sm font-medium text-slate-700 ml-1"
                                 >
-                                    Şifre Tekrar
+                                    {t('confirmPassword')}
                                 </label>
-                                <input
-                                    id="confirmPassword"
-                                    type="password"
-                                    className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all placeholder-gray-400 text-gray-900
-                                        ${errors.confirmPassword
-                                            ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                                            : "border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"}`}
-                                    placeholder="********"
-                                    {...register("confirmPassword")}
-                                />
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-violet-300 group-focus-within:text-[#991B1B] transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path></svg>
+                                    </div>
+                                    <input
+                                        id="confirmPassword"
+                                        type="password"
+                                        className={`block w-full pl-11 pr-4 py-3.5 bg-white/70 border rounded-2xl focus:ring-2 focus:ring-[#991B1B] focus:border-[#991B1B] outline-none transition-all text-slate-900 placeholder:text-slate-400
+                                            ${errors.confirmPassword
+                                                ? "border-red-400"
+                                                : "border-violet-100"}`}
+                                        placeholder="••••••••"
+                                        {...register("confirmPassword")}
+                                    />
+                                </div>
                                 {errors.confirmPassword && (
-                                    <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>
+                                    <p className="text-xs text-red-500 ml-1">{errors.confirmPassword.message}</p>
                                 )}
                             </div>
                         )}
 
-                        <div className="pt-2">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className={`w-full font-semibold py-3 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed
-                                    bg-linear-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white
-                                `}
-                            >
-                                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                                {loading
-                                    ? (isLogin ? "Giriş yapılıyor..." : "Kaydediliyor...")
-                                    : (isLogin ? "Giriş Yap" : "Kayıt Ol")
-                                }
-                            </button>
-                        </div>
-                    </form>
-
-                    <div className="mt-6 text-center">
+                        {/* Submit Button */}
                         <button
-                            type="button"
-                            onClick={() => {
-                                setIsLogin(!isLogin);
-                                // Validation errors cleared via useEffect
-                            }}
-                            className="text-sm font-medium hover:underline transition-colors text-gray-600 hover:text-rose-600"
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#991B1B] hover:bg-[#7C2D12] text-white font-semibold py-4 rounded-2xl shadow-lg shadow-[#991B1B]/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                         >
-                            {isLogin ? (
-                                <span>
-                                    Hesabın yok mu? <span className="text-indigo-600">Kayıt Ol</span>
-                                </span>
-                            ) : (
-                                <span>
-                                    Zaten hesabın var mı? <span className="text-indigo-600">Giriş Yap</span>
-                                </span>
+                            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                            <span>
+                                {loading
+                                    ? (isLogin ? t('loggingIn') : t('registering'))
+                                    : (isLogin ? t('loginButton') : t('registerButton'))
+                                }
+                            </span>
+                            {!loading && (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                             )}
                         </button>
-                    </div>
+                    </form>
                 </div>
+
+                {/* Toggle Login / Register */}
+                <p className="text-center text-slate-500 text-sm">
+                    {isLogin ? (
+                        <>
+                            {t('noAccount')}
+                            <button
+                                type="button"
+                                onClick={() => setIsLogin(false)}
+                                className="text-[#991B1B] font-bold hover:underline underline-offset-4 ml-1 transition-colors"
+                            >
+                                {t('registerButton')}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            {t('haveAccount')}
+                            <button
+                                type="button"
+                                onClick={() => setIsLogin(true)}
+                                className="text-[#991B1B] font-bold hover:underline underline-offset-4 ml-1 transition-colors"
+                            >
+                                {t('loginButton')}
+                            </button>
+                        </>
+                    )}
+                </p>
             </div>
-        </main >
+        </main>
     );
 }
