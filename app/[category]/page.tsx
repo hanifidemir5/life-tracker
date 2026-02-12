@@ -430,148 +430,152 @@ export default function CategoryPage() {
 
   return (
     <main className="min-h-screen p-8 pb-32">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-xl mx-auto">
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative z-20">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/")}
-              className="p-2 hover:bg-gray-100 rounded-full transition"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-
+        <div className="flex flex-col gap-3 mb-6 relative z-20">
+          {/* TOP ROW: Title Section */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              {categoryData && (
-                <div
-                  className={`p-2 rounded-full ${categoryData.color_class.replace("hover:", "")} bg-opacity-50`}
-                >
-                  {getIconComponent(
-                    categoryData.icon_name,
-                    `w-6 h-6 ${getIconColorClass(categoryData.color_class)}`
+              <button
+                onClick={() => router.push("/")}
+                className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400 hover:text-gray-600"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                {categoryData && (
+                  <div
+                    className={`p-2 rounded-full ${categoryData.color_class.replace("hover:", "")} bg-opacity-50`}
+                  >
+                    {getIconComponent(
+                      categoryData.icon_name,
+                      `w-6 h-6 ${getIconColorClass(categoryData.color_class)}`
+                    )}
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <h1 className="text-xl font-bold text-gray-800 leading-none">{headerTitle}</h1>
+                  {paginatedData && (
+                    <span className="text-xs text-gray-400 font-medium mt-1">
+                      {paginatedData.totalCount} {t('items') || 'items'}
+                    </span>
                   )}
                 </div>
-              )}
-              <h1 className="text-2xl font-bold text-gray-800">{headerTitle}</h1>
-              {paginatedData && (
-                <span className="bg-pink-100 text-pink-700 text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                  {paginatedData.totalCount} {t('items') || 'items'}
-                </span>
-              )}
+              </div>
             </div>
           </div>
 
-          {/* Right side controls */}
-          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 w-full md:w-auto">
-            {/* SELECT MODE BUTTON */}
-            <button
-              onClick={toggleSelectionMode}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${isSelectionMode
-                ? `${colors.primaryLight} border ${colors.border} ${colors.primary} hover:opacity-90`
-                : "bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200"
-                }`}
-            >
-              {isSelectionMode ? (
-                <>
-                  <span className="text-sm">✕</span>
-                  <span className="hidden sm:inline">{t('cancelSelection')}</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('selectMode')}</span>
-                </>
-              )}
-            </button>
+          {/* BOTTOM ROW: Actions Section */}
+          <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-2">
+              {/* CATEGORY DROPDOWN */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 hover:border-gray-300 transition-colors text-sm h-full"
+                >
+                  <span className="font-medium truncate mr-1">
+                    {categoryData?.name || t('selectCategoryDropdown')}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
 
-            {/* IMPORT BUTTON */}
-            <button
-              onClick={() => setShowBulkImport(true)}
-              className={`hidden md:flex items-center gap-2 px-4 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium`}
-              title={t('importData')}
-            >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('importData')}</span>
-            </button>
+                {isDropdownOpen && (
+                  <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
+                )}
 
-            {/* EXPORT DROPDOWN */}
-            <div className="relative">
-              <button
-                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors font-medium"
-                title={t('exportData')}
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('exportData')}</span>
-              </button>
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
+                    <div
+                      onClick={() => handleCategoryChange("home")}
+                      className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-gray-700 border-b border-gray-100"
+                    >
+                      <span className="text-xl">🏠</span>
+                      <span className="font-medium">{t('backToHome')}</span>
+                    </div>
 
-              {isExportDropdownOpen && (
-                <div className="fixed inset-0 z-10" onClick={() => setIsExportDropdownOpen(false)} />
-              )}
-
-              {isExportDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
-                  <button
-                    onClick={handleExportCSV}
-                    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-gray-700 border-b border-gray-100"
-                  >
-                    <span className="text-lg">📊</span>
-                    <span className="font-medium">{t('exportAsCSV')}</span>
-                  </button>
-                  <button
-                    onClick={handleExportJSON}
-                    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                  >
-                    <span className="text-lg">📄</span>
-                    <span className="font-medium">{t('exportAsJSON')}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* CATEGORY DROPDOWN */}
-            <div className="relative min-w-[180px]">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:border-gray-400 transition-colors"
-              >
-                <span className="font-medium truncate mr-2">
-                  {categoryData?.name || t('selectCategoryDropdown')}
-                </span>
-                <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-              )}
-
-              {isDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
-                  <div
-                    onClick={() => handleCategoryChange("home")}
-                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-gray-700 border-b border-gray-100"
-                  >
-                    <span className="text-xl">🏠</span>
-                    <span className="font-medium">{t('backToHome')}</span>
-                  </div>
-
-                  <div className="max-h-[300px] overflow-y-auto">
-                    {allCategories.map((cat: Category) => (
-                      <div
-                        key={cat.id}
-                        onClick={() => handleCategoryChange(cat.key)}
-                        className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${currentCategoryKey === cat.key ? `${colors.primaryLight} ${colors.primary}` : "hover:bg-gray-50 text-gray-700"
-                          }`}
-                      >
-                        <div className={`p-1.5 rounded-full ${cat.color_class.replace("hover:", "")} bg-opacity-30`}>
-                          {getIconComponent(cat.icon_name, `w-4 h-4 ${getIconColorClass(cat.color_class)}`)}
+                    <div className="max-h-[200px] overflow-y-auto">
+                      {allCategories.map((cat: Category) => (
+                        <div
+                          key={cat.id}
+                          onClick={() => handleCategoryChange(cat.key)}
+                          className={`px-3 py-2.5 cursor-pointer flex items-center gap-2 transition-colors ${currentCategoryKey === cat.key ? `${colors.primaryLight} ${colors.primary}` : "hover:bg-gray-50 text-gray-700"
+                            }`}
+                        >
+                          <div className={`p-1 rounded-full ${cat.color_class.replace("hover:", "")} bg-opacity-30 shrink-0`}>
+                            {getIconComponent(cat.icon_name, `w-3 h-3 ${getIconColorClass(cat.color_class)}`)}
+                          </div>
+                          <span className="font-medium text-sm truncate">{cat.name}</span>
                         </div>
-                        <span className="font-medium">{cat.name}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+
+              {/* SELECT MODE BUTTON */}
+              <button
+                onClick={toggleSelectionMode}
+                className={`flex items-center justify-center gap-1 px-1 py-2 rounded-lg font-medium transition-colors text-xs ${isSelectionMode
+                  ? `${colors.primaryLight} border ${colors.border} ${colors.primary}`
+                  : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
+                  }`}
+              >
+                {isSelectionMode ? (
+                  <>
+                    <span>✕</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t('select')}</span>
+                  </>
+                )}
+              </button>
+
+              {/* IMPORT BUTTON */}
+              <button
+                onClick={() => setShowBulkImport(true)}
+                className={`flex items-center justify-center gap-1 px-1 py-2 ${colors.primaryLight} border ${colors.border} rounded-lg ${colors.primary} hover:opacity-90 transition-colors font-medium text-xs`}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t('import')}</span>
+              </button>
+
+              {/* EXPORT BUTTON */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                  className="w-full h-full flex items-center justify-center gap-1 px-1 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors font-medium text-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t('export')}</span>
+                </button>
+
+                {isExportDropdownOpen && (
+                  <div className="fixed inset-0 z-10" onClick={() => setIsExportDropdownOpen(false)} />
+                )}
+
+                {isExportDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
+                    <button
+                      onClick={handleExportCSV}
+                      className="w-full px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2 text-gray-700 border-b border-gray-100 text-sm"
+                    >
+                      <span className="text-base">📊</span>
+                      <span>CSV</span>
+                    </button>
+                    <button
+                      onClick={handleExportJSON}
+                      className="w-full px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2 text-gray-700 text-sm"
+                    >
+                      <span className="text-base">📄</span>
+                      <span>JSON</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -597,7 +601,7 @@ export default function CategoryPage() {
                 className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
               >
                 {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
-                {'Taşı'} ({selectedItems.size})
+                {t('move') || 'Move'} ({selectedItems.size})
               </button>
               <button
                 onClick={handleBulkDelete}
@@ -619,12 +623,22 @@ export default function CategoryPage() {
           {localItems.length > 0 && (
             <Link
               href={`/add?category=${currentCategoryKey}`}
-              className={`bg-white/60 p-6 rounded-xl border-2 border-dashed ${colors.borderLight} hover:${colors.border} hover:bg-white transition-all flex items-center justify-center gap-3 min-h-[120px] group`}
+              className="bg-white p-8 rounded-4xl border-2 border-dashed border-rose-200 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-100/50 transition-all flex flex-col items-center justify-center text-center gap-4 min-h-[180px] group relative overflow-hidden"
             >
-              <div className={`p-3 rounded-full ${colors.primaryLight} transition-colors`}>
-                <Plus className={`w-6 h-6 ${colors.primary}`} />
+              <div className="absolute inset-0 bg-linear-to-br from-rose-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+              <div className="bg-rose-50 p-4 rounded-full relative z-10 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 shadow-sm">
+                <Pencil className="w-6 h-6 text-[#991B1B]" />
               </div>
-              <span className={`${colors.primary} font-semibold text-lg`}>{t('addNew')}</span>
+
+              <div className="relative z-10 max-w-md">
+                <h3 className="text-xl font-bold text-[#991B1B] mb-2 font-display">
+                  {t('writeNoteTogether')}
+                </h3>
+                <p className="text-sm text-rose-400 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
+                  {t('immortalizeMoment')}
+                </p>
+              </div>
             </Link>
           )}
           {localItems.map((item) => (
@@ -632,131 +646,151 @@ export default function CategoryPage() {
               key={item.id}
               ref={(el) => { itemRefs.current[item.id] = el; }}
               onClick={() => isSelectionMode ? toggleItemSelection(item.id) : router.push(`/detail/${item.id}?page=${currentPage}&category=${currentCategoryKey}`)}
-              className={`bg-white p-4 md:p-6 md:pt-8 rounded-xl shadow-lg hover:shadow-2xl border-2 transition-all flex flex-col md:flex-row items-center md:items-start justify-between relative group min-h-[120px] cursor-pointer gap-4 md:gap-0
-                ${isSelectionMode ? '' : ''}
+              className={`bg-white rounded-2xl shadow-md hover:shadow-xl border transition-all cursor-pointer overflow-hidden group relative
                 ${highlightedItemId === String(item.id) ? 'ring-4 ring-yellow-400 animate-pulse' : ''}
                 ${selectedItems.has(item.id)
-                  ? `border-current ring-2 ring-opacity-50 ${colors.primaryLight} ${colors.primary}`
+                  ? `border-2 border-current ring-2 ring-opacity-50 ${colors.primaryLight} ${colors.primary}`
                   : pendingUpdates.hasOwnProperty(item.id)
-                    ? `border-dashed ${colors.borderLight}`
-                    : `${colors.borderLight} hover:${colors.border}`
+                    ? `border-2 border-dashed ${colors.borderLight}`
+                    : `border-gray-100 hover:border-gray-200`
                 }`}
             >
-              {/* Selection Checkbox OR Edit Button */}
-              {isSelectionMode ? (
+              {/* Selection Checkbox */}
+              {isSelectionMode && (
                 <div
-                  className={`absolute top-2 left-2 p-1.5 rounded-lg transition-colors ${selectedItems.has(item.id) ? `bg-gradient-to-br ${colors.buttonGradient} text-white` : "bg-gray-200 text-gray-400"
+                  className={`absolute top-3 left-3 z-10 p-1.5 rounded-full shadow-md transition-colors ${selectedItems.has(item.id) ? `bg-linear-to-br ${colors.buttonGradient} text-white` : "bg-white/90 text-gray-400"
                     }`}
                 >
                   {selectedItems.has(item.id) ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                 </div>
-              ) : (
-                <Link
-                  href={`/update/${item.id}?page=${currentPage}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className={`absolute top-2 left-2 p-1.5 text-gray-300 hover:${colors.primary} hover:${colors.primaryLight} rounded-lg transition-colors`}
-                  title={t('edit')}
-                >
-                  <Pencil className="w-5 h-5" />
-                </Link>
               )}
 
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-full transition-colors ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
-                  {categoryData && getIconComponent(categoryData.icon_name, `w-5 h-5 ${getIconColorClass(categoryData.color_class)}`)}
-                </div>
-
-                <div>
-                  <h3 className={`font-semibold text-lg transition-colors ${item.status ? "text-gray-500" : "text-gray-900"}`}>
-                    {item.title}
-                  </h3>
-
-                  <div className="flex flex-wrap gap-2 items-center mt-1">
-                    <span className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border transition-colors ${item.status ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}>
+              {/* Hero Image */}
+              {item.image_urls && item.image_urls.length > 0 && (
+                <div className="relative w-full h-56 sm:h-72 overflow-hidden bg-gray-100">
+                  <img
+                    src={item.image_urls[photoSlideIndex[item.id] || 0]}
+                    alt={`${item.title}`}
+                    className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${!item.status ? 'grayscale' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(item.image_urls![photoSlideIndex[item.id] || 0], '_blank');
+                    }}
+                  />
+                  {/* Photo counter badge */}
+                  {item.image_urls.length > 1 && (
+                    <>
+                      <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full font-medium backdrop-blur-sm">
+                        {(photoSlideIndex[item.id] || 0) + 1}/{item.image_urls.length}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const currentIdx = photoSlideIndex[item.id] || 0;
+                          const newIdx = currentIdx === 0 ? item.image_urls!.length - 1 : currentIdx - 1;
+                          setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-lg transition-opacity opacity-0 group-hover:opacity-100"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-gray-700" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const currentIdx = photoSlideIndex[item.id] || 0;
+                          const newIdx = currentIdx === item.image_urls!.length - 1 ? 0 : currentIdx + 1;
+                          setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-lg transition-opacity opacity-0 group-hover:opacity-100"
+                      >
+                        <ChevronRight className="w-4 h-4 text-gray-700" />
+                      </button>
+                    </>
+                  )}
+                  {/* Status overlay on image */}
+                  <div className="absolute bottom-3 left-3">
+                    <span className={`inline-flex items-center gap-1 text-xs uppercase font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-sm ${item.status ? "bg-green-500/90 text-white" : "bg-amber-500/90 text-white"}`}>
                       {item.status ? (<><CheckCheck className="w-3 h-3" /> {t('completed')}</>) : (<><Clock className="w-3 h-3" /> {t('pending')}</>)}
                     </span>
+                  </div>
+                </div>
+              )}
 
-                    {item.created_at && (
-                      <span className="text-sm text-gray-500">{new Date(item.created_at).toLocaleDateString()}</span>
+              {/* Card Body */}
+              <div className="p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {/* Category icon (shown only when no image) */}
+                    {(!item.image_urls || item.image_urls.length === 0) && (
+                      <div className={`p-2.5 rounded-xl shrink-0 ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
+                        {categoryData && getIconComponent(categoryData.icon_name, `w-5 h-5 ${getIconColorClass(categoryData.color_class)}`)}
+                      </div>
                     )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-bold text-base sm:text-lg leading-tight ${item.status ? "text-gray-500 line-through decoration-1" : "text-gray-900"}`}>
+                        {item.title}
+                      </h3>
+                      {/* Status badge (shown only when no image) */}
+                      {(!item.image_urls || item.image_urls.length === 0) && (
+                        <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full mt-1.5 ${item.status ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                          {item.status ? (<><CheckCheck className="w-3 h-3" /> {t('completed')}</>) : (<><Clock className="w-3 h-3" /> {t('pending')}</>)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                    {item.description && (
-                      <p className="text-sm text-gray-500 border-l pl-2 border-gray-300 hidden sm:block">{item.description}</p>
-                    )}
+                  {/* Date */}
+                  {item.created_at && (
+                    <span className="text-sm font-semibold text-rose-500 whitespace-nowrap shrink-0">
+                      {new Date(item.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
 
+                {/* Description */}
+                {item.description && (
+                  <p className="text-sm text-gray-500 italic mt-2.5 leading-relaxed line-clamp-2">
+                    &ldquo;{item.description}&rdquo;
+                  </p>
+                )}
+
+                {/* Footer: Owner + Actions */}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
                     {item.owner && (
-                      <span className="hidden sm:flex items-center gap-1 text-xs font-medium px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
                         <User className="w-3 h-3" />{item.owner}
                       </span>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* Right Side */}
-              <div className="flex flex-row md:flex-col items-center gap-3 shrink-0 self-end md:self-auto w-full md:w-auto justify-between md:justify-start mt-2 md:mt-0">
-                {item.image_urls && item.image_urls.length > 0 && (
-                  <div className="relative w-20 h-20">
-                    <img
-                      src={item.image_urls[photoSlideIndex[item.id] || 0]}
-                      alt={`${item.title} foto`}
-                      className="w-20 h-20 object-cover rounded-xl border-2 border-pink-200 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={`/update/${item.id}?page=${currentPage}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title={t('edit')}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={(e) => handleDelete(e, item.id)}
+                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title={t('delete')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(item.image_urls![photoSlideIndex[item.id] || 0], '_blank');
+                        toggleStatus(item.id, item.status);
                       }}
-                    />
-                    {item.image_urls.length > 1 && (
-                      <>
-                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                          {(photoSlideIndex[item.id] || 0) + 1}/{item.image_urls.length}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const currentIdx = photoSlideIndex[item.id] || 0;
-                            const newIdx = currentIdx === 0 ? item.image_urls!.length - 1 : currentIdx - 1;
-                            setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
-                          }}
-                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white/90 hover:bg-white rounded-full p-0.5 shadow-md"
-                        >
-                          <ChevronLeft className="w-4 h-4 text-gray-700" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const currentIdx = photoSlideIndex[item.id] || 0;
-                            const newIdx = currentIdx === item.image_urls!.length - 1 ? 0 : currentIdx + 1;
-                            setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
-                          }}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-white/90 hover:bg-white rounded-full p-0.5 shadow-md"
-                        >
-                          <ChevronRight className="w-4 h-4 text-gray-700" />
-                        </button>
-                      </>
-                    )}
+                      className="p-1 hover:scale-110 transition-transform"
+                    >
+                      {item.status ? <CheckCircle className="w-7 h-7 text-green-500" /> : <Circle className="w-7 h-7 text-gray-300 hover:text-blue-400" />}
+                    </button>
                   </div>
-                )}
-
-                <div className="flex md:flex-col items-center justify-between gap-2 self-stretch ml-auto md:ml-0">
-                  <button
-                    onClick={(e) => handleDelete(e, item.id)}
-                    className={`p-1.5 text-gray-400 hover:${colors.primary} hover:${colors.primaryLight} rounded-lg transition-colors`}
-                    title={t('delete')}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleStatus(item.id, item.status);
-                    }}
-                    className="hover:scale-110 transition-transform"
-                  >
-                    {item.status ? <CheckCircle className="w-8 h-8 text-green-500" /> : <Circle className="w-8 h-8 text-gray-300 hover:text-blue-400" />}
-                  </button>
                 </div>
               </div>
             </div>
@@ -791,7 +825,7 @@ export default function CategoryPage() {
             <button
               onClick={saveChanges}
               disabled={isSaving}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold text-lg transition-transform hover:scale-105"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-5 sm:px-8 py-2.5 sm:py-3 rounded-full shadow-2xl flex items-center gap-2 sm:gap-3 font-bold text-sm sm:text-lg transition-transform hover:scale-105"
             >
               <Save className="w-6 h-6" />
               {Object.keys(pendingUpdates).length} {t('saveChangesCount')}
