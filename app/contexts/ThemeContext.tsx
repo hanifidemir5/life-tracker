@@ -1,7 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/app/lib/supebaseClient";
+
+const AUTH_ROUTES = ["/login", "/reset-password"];
 
 type ThemeMode = "romantic" | "normal";
 
@@ -62,6 +65,9 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
+    const isAuthPage = AUTH_ROUTES.some(route => pathname?.startsWith(route));
+
     // Initialize from localStorage cache to prevent flash on returning visits
     const [isPaired, setIsPaired] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -115,9 +121,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const themeMode: ThemeMode = isPaired ? "romantic" : "normal";
     const colors = isPaired ? romanticTheme : normalTheme;
 
+    // Auth pages always get the gradient-auth background
+    const bgClass = isAuthPage ? "bg-gradient-auth" : colors.pageBg;
+
+    // Apply theme background to body element
+    useEffect(() => {
+        document.body.classList.forEach(cls => {
+            if (cls.startsWith('bg-') || cls.startsWith('from-') || cls.startsWith('via-') || cls.startsWith('to-')) {
+                document.body.classList.remove(cls);
+            }
+        });
+        // Apply all bg classes (might be multiple words like "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50")
+        bgClass.split(' ').forEach(cls => {
+            if (cls) document.body.classList.add(cls);
+        });
+    }, [bgClass]);
+
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
             </div>
         );
@@ -125,9 +147,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     return (
         <ThemeContext.Provider value={{ themeMode, isPaired, colors, isLoading }}>
-            <div className={`min-h-screen flex flex-col ${colors.pageBg} transition-colors duration-500`}>
-                {children}
-            </div>
+            {children}
         </ThemeContext.Provider>
     );
 }
