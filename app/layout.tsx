@@ -32,7 +32,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-gradient-auth min-h-screen w-full mt-36`}>
         <QueryProvider>
           <LanguageProvider>
             <ThemeProvider>
