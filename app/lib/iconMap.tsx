@@ -37,7 +37,7 @@ export const getIconComponent = (iconName: string, className?: string) => {
       <img
         src={iconName}
         alt="Category Icon"
-        className={`${className} object-cover rounded-full`}
+        className={`${className} object-cover`}
       />
     );
   }
