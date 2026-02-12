@@ -25,7 +25,7 @@ interface ThemeColors {
 }
 
 const romanticTheme: ThemeColors = {
-    pageBg: "bg-gradient-to-br from-pink-50 via-rose-50 to-red-50",
+    pageBg: "bg-gradient-auth",
     cardBg: "bg-white border-pink-100",
     headerGradient: "from-pink-500 to-rose-500",
     buttonGradient: "from-pink-500 to-rose-600",
