@@ -13,7 +13,7 @@ import QueryProvider from "@/app/providers/QueryProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Precious Memories - Our Love Story",
+  title: "HeartSync",
   description: "A romantic diary to track and cherish precious moments together",
   icons: {
     icon: "/favicon.png",
