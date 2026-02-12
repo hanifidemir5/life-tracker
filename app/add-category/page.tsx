@@ -139,7 +139,7 @@ export default function AddCategoryPage() {
   const activeColorObj = colorOptions.find(c => c.value === currentColorClass) || colorOptions[0];
 
   return (
-    <main className="flex-1 flex items-center justify-center p-4">
+    <main className="min-h-screen flex items-center justify-center p-4">
       <div className={`bg-white w-full max-w-lg lg:max-w-3xl p-8 rounded-2xl shadow-2xl border-4 transition-colors duration-300 ${activeColorObj.borderColor || (isPaired ? 'border-pink-100' : 'border-slate-100')}`}>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{t('addCategory')}</h1>
@@ -243,7 +243,7 @@ export default function AddCategoryPage() {
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-20 h-20 object-cover rounded-full shadow-md"
+                      className="w-48 h-48 object-cover rounded-2xl shadow-md"
                     />
                     <button
                       type="button"
