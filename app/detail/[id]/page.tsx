@@ -135,7 +135,7 @@ export default function ItemDetailPage() {
                             </div>
                         )}
                         {/* Gradient Overlay for text readability */}
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-black/70 to-transparent pointer-events-none" />
                     </div>
 
                     {/* Main Title (Below/Over Image at bottom) */}
@@ -191,7 +191,7 @@ export default function ItemDetailPage() {
                     </div>
 
                     {/* Description */}
-                    <div className="flex-grow">
+                    <div className="grow">
                         <h3 className="text-gray-400 uppercase tracking-widest text-xs font-bold mb-4">
                             {t('description') || 'Description'}
                         </h3>
