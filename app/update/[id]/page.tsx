@@ -313,7 +313,7 @@ export default function UpdateItemPage() {
   }
 
   return (
-    <main className="w-full h-full flex items-center justify-center p-4 flex-1">
+    <main className="min-h-screen w-full flex items-center justify-center p-4 flex-1">
       <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 relative">
         {/* CUSTOM DELETE MODAL */}
         {showDeleteModal && (
