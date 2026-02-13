@@ -53,7 +53,7 @@ export default function GlobalSearch() {
         fetchCategories();
     }, []);
 
-    // Search when query changes
+    // Search when query changes — uses client-side Turkish-aware case comparison
     useEffect(() => {
         const searchItems = async () => {
             if (query.trim().length < 2) {
@@ -66,12 +66,18 @@ export default function GlobalSearch() {
             const { data, error } = await supabase
                 .from("items")
                 .select("id, title, description, category, status")
-                .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
                 .order("created_at", { ascending: false })
-                .limit(10);
+                .limit(500);
 
             if (!error && data) {
-                const enrichedResults = data.map((item: SearchResult) => ({
+                const lowerQuery = query.toLocaleLowerCase('tr-TR');
+
+                const filtered = data.filter((item: SearchResult) =>
+                    item.title?.toLocaleLowerCase('tr-TR').includes(lowerQuery) ||
+                    item.description?.toLocaleLowerCase('tr-TR').includes(lowerQuery)
+                ).slice(0, 10);
+
+                const enrichedResults = filtered.map((item: SearchResult) => ({
                     ...item,
                     category_name: categories[item.category]?.name || item.category,
                     category_icon: categories[item.category]?.icon_name || "Circle",
