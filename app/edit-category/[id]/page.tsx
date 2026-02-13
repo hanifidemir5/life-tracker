@@ -319,7 +319,7 @@ export default function EditCategoryPage() {
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-20 h-20 object-cover rounded-full shadow-md"
+                      className="w-48 h-48 object-cover rounded-2xl shadow-md"
                     />
                     <button
                       type="button"
