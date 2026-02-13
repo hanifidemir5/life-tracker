@@ -78,12 +78,7 @@ export default function AddItemPage() {
 
   useEffect(() => {
     const initData = async () => {
-      // 1. Pre-select category from URL if provided
-      if (preSelectedCategory) {
-        setValue("category", preSelectedCategory);
-      }
-
-      // 2. Profilleri Çek
+      // Profilleri Çek
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setCurrentUserId(user.id);
@@ -113,7 +108,14 @@ export default function AddItemPage() {
     };
 
     initData();
-  }, [preSelectedCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Set pre-selected category AFTER categories are loaded so the <select> can display it
+  useEffect(() => {
+    if (preSelectedCategory && categories.length > 0) {
+      setValue("category", preSelectedCategory);
+    }
+  }, [preSelectedCategory, categories, setValue]);
 
 
 
