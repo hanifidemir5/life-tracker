@@ -107,15 +107,12 @@ export default function Header() {
                 </div>
             </div>
 
-            {/* Mobile Search Bar - slides down when toggled */}
-            <div
-                className={`sm:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMobileSearchOpen ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
-                    }`}
-            >
-                <div className="px-4 pb-4">
+            {/* Mobile Search Bar - conditionally rendered */}
+            {isMobileSearchOpen && (
+                <div className="sm:hidden px-4 pb-4">
                     <GlobalSearch />
                 </div>
-            </div>
+            )}
         </header>
     );
 }
