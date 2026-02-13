@@ -620,27 +620,6 @@ export default function CategoryPage() {
 
         {/* LİSTE */}
         <div className="grid grid-cols-1 gap-4 z-0">
-          {localItems.length > 0 && (
-            <Link
-              href={`/add?category=${currentCategoryKey}`}
-              className="bg-white p-8 rounded-4xl border-2 border-dashed border-rose-200 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-100/50 transition-all flex flex-col items-center justify-center text-center gap-4 min-h-[180px] group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-linear-to-br from-rose-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-              <div className="bg-rose-50 p-4 rounded-full relative z-10 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 shadow-sm">
-                <Pencil className="w-6 h-6 text-[#991B1B]" />
-              </div>
-
-              <div className="relative z-10 max-w-md">
-                <h3 className="text-xl font-bold text-[#991B1B] mb-2 font-display">
-                  {t('writeNoteTogether')}
-                </h3>
-                <p className="text-sm text-rose-400 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
-                  {t('immortalizeMoment')}
-                </p>
-              </div>
-            </Link>
-          )}
           {localItems.map((item) => (
             <div
               key={item.id}
@@ -837,9 +816,9 @@ export default function CategoryPage() {
       {/* Floating Add Button */}
       <Link
         href={`/add?category=${currentCategoryKey}`}
-        className={`fixed top-24 right-8 bg-gradient-to-r ${colors.buttonGradient} text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 flex items-center justify-center z-50`}
+        className="fixed bottom-8 right-8 bg-linear-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 text-white p-4 rounded-full shadow-xl hover:shadow-2xl transition-all hover:scale-110 flex items-center justify-center z-40"
       >
-        <Plus className="w-8 h-8" />
+        <Plus className="w-7 h-7" />
       </Link>
 
       {/* Delete Item Modal */}
