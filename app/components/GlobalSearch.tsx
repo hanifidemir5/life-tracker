@@ -148,7 +148,7 @@ export default function GlobalSearch() {
 
             {/* Results Dropdown */}
             {isFocused && (results.length > 0 || (query.length >= 2 && !isLoading)) && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[400px] overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-100 max-h-[400px] overflow-y-auto">
                     {results.length > 0 ? (
                         results.map((item) => (
                             <Link
