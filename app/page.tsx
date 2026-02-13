@@ -143,6 +143,14 @@ export default function Home() {
 
         </div>
       </section>
+
+      {/* Floating Add Item Button */}
+      <Link
+        href="/add"
+        className="fixed bottom-8 right-8 bg-linear-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 text-white p-4 rounded-full shadow-xl hover:shadow-2xl transition-all hover:scale-110 flex items-center justify-center z-40"
+      >
+        <Plus className="w-7 h-7" />
+      </Link>
     </main>
   );
 }
