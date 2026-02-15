@@ -138,7 +138,7 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="bg-gradient-auth min-h-[100vh - 9rem] flex items-center justify-center p-6">
+        <main className="bg-gradient-auth min-h-[100vh - 9rem] flex items-center justify-center md:p-6">
             {/* SUCCESS MODAL (Kayıt Başarılı) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -279,7 +279,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Glass Card Form */}
-                <div className="glass-card p-8 rounded-2xl soft-shadow space-y-6">
+                <div className="glass-card p-6 md:p-8 rounded-2xl soft-shadow space-y-6">
                     <form
                         onSubmit={handleSubmit(onSubmit)}
                         className="space-y-5"
