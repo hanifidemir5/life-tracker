@@ -78,7 +78,7 @@ export default function Header() {
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                             className="p-2.5 sm:p-3 bg-white border-2 border-rose-100 rounded-full text-rose-400 hover:border-rose-300 hover:text-rose-600 transition-colors shadow-sm relative focus:outline-none focus:ring-2 focus:ring-rose-200"
                         >
-                            <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
                         {isSettingsOpen && (
