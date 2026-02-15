@@ -138,11 +138,11 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="bg-gradient-auth min-h-[100vh - 9rem] flex items-center justify-center md:p-6">
+        <main className="bg-gradient-auth min-h-screen md:min-h-[100vh - 9rem] flex items-center justify-center md:p-6 md:-mt-36">
             {/* SUCCESS MODAL (Kayıt Başarılı) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full text-center">
                         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <CheckCircle className="w-8 h-8" />
                         </div>
