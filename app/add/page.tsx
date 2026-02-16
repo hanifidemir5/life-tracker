@@ -327,8 +327,9 @@ export default function AddItemPage() {
                     <div className="relative flex items-center justify-center">
                       <input
                         type="radio"
-                        value={profile.name}
-                        {...register("owner")}
+                        name="owner"
+                        onChange={() => setValue("owner", profile.name, { shouldValidate: true })}
+                        checked={currentOwner === profile.name}
                         className="peer appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-blue-600 checked:bg-blue-600 transition-all"
                       />
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
