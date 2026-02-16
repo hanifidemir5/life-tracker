@@ -285,6 +285,7 @@ export const translations = {
         addNewCollection: "Yeni Ekle",
         searchPlaceholderHome: "Anılarda ara...",
         profilePageTitle: "Profil",
+        profile: "Profil",
     },
     en: {
         // Home Page
@@ -571,6 +572,7 @@ export const translations = {
         addNewCollection: "Add New",
         searchPlaceholderHome: "Search memories...",
         profilePageTitle: "Profile",
+        profile: "Profile",
     },
 };
 

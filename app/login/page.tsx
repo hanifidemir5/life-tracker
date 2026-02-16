@@ -138,7 +138,7 @@ export default function LoginPage() {
     };
 
     return (
-        <main className="bg-gradient-auth min-h-screen md:min-h-[100vh - 9rem] flex items-center justify-center md:p-6 md:-mt-36">
+        <main className="bg-gradient-auth min-h-screen md:min-h-[100vh - 9rem] flex items-center justify-center md:p-6 -mt-24 md:-mt-36">
             {/* SUCCESS MODAL (Kayıt Başarılı) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
