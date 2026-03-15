@@ -21,6 +21,8 @@ import {
   Download,
   Upload,
   ArrowRightLeft,
+  Calendar,
+  X,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
@@ -32,6 +34,7 @@ import { useCategories, useCategoryByKey, Category } from "@/app/hooks/useCatego
 import { itemsToCSV, itemsToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
 import ConfirmModal from "@/app/components/ConfirmModal";
 import BulkImportModal from "@/app/components/BulkImportModal";
+import CalendarSidebar from "@/app/components/TodoSection";
 
 export default function CategoryPage() {
   const params = useParams();
@@ -86,6 +89,8 @@ export default function CategoryPage() {
 
   // Bulk import modal state
   const [showBulkImport, setShowBulkImport] = useState(false);
+
+  const [isMobileCalendarOpen, setIsMobileCalendarOpen] = useState(false);
 
   // React Query hooks
   const { data: paginatedData, isLoading: itemsLoading } = useItems(currentCategoryKey, currentPage);
@@ -430,7 +435,8 @@ export default function CategoryPage() {
 
   return (
     <main className="min-h-screen p-8 pb-32">
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
+        <div className="flex-1 min-w-0 order-last lg:order-first">
         {/* HEADER */}
         <div className="flex flex-col gap-3 mb-6 relative z-20">
           {/* TOP ROW: Title Section */}
@@ -464,6 +470,14 @@ export default function CategoryPage() {
                 </div>
               </div>
             </div>
+
+            {/* Mobile Calendar Toggle Button */}
+            <button 
+              onClick={() => setIsMobileCalendarOpen(true)}
+              className="lg:hidden p-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors shadow-sm ml-auto shrink-0"
+            >
+              <Calendar className="w-5 h-5" />
+            </button>
           </div>
 
           {/* BOTTOM ROW: Actions Section */}
@@ -606,7 +620,7 @@ export default function CategoryPage() {
               <button
                 onClick={handleBulkDelete}
                 disabled={selectedItems.size === 0 || isDeleting}
-                className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${colors.buttonGradient} text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md`}
+                className={`flex items-center gap-2 px-4 py-2 bg-linear-to-r ${colors.buttonGradient} text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md`}
               >
                 {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 {t('bulkDelete')} ({selectedItems.size})
@@ -787,7 +801,7 @@ export default function CategoryPage() {
               <p className="text-gray-500 font-medium mb-8 max-w-xs mx-auto">{t('listEmptyMessage')}</p>
               <Link
                 href={`/add?category=${currentCategoryKey}`}
-                className={`bg-gradient-to-r ${colors.buttonGradient} text-white px-8 py-3 rounded-xl font-bold transition-all hover:shadow-lg hover:scale-105 flex items-center gap-2`}
+                className={`bg-linear-to-r ${colors.buttonGradient} text-white px-8 py-3 rounded-xl font-bold transition-all hover:shadow-lg hover:scale-105 flex items-center gap-2`}
               >
                 <Plus className="w-5 h-5" />{t('addNew')}
               </Link>
@@ -811,6 +825,31 @@ export default function CategoryPage() {
             </button>
           </div>
         )}
+        </div>
+
+        {/* RIGHT — CALENDAR SIDEBAR (hidden on mobile) */}
+        <CalendarSidebar userId={currentUserId} className="hidden lg:block order-first lg:order-last" />
+
+        {/* MOBILE CALENDAR DRAWER */}
+        <div 
+            className={`fixed inset-0 z-50 flex justify-end lg:hidden transition-all duration-300 ${isMobileCalendarOpen ? "visible opacity-100" : "invisible opacity-0"}`}
+        >
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black/20 backdrop-blur-sm" 
+              onClick={() => setIsMobileCalendarOpen(false)} 
+            />
+            {/* Drawer */}
+            <div className={`relative w-full max-w-sm bg-[#f8f5f6] h-full overflow-y-auto shadow-2xl px-4 pt-16 pb-4 transition-transform duration-300 transform ${isMobileCalendarOpen ? "translate-x-0" : "translate-x-full"}`}>
+                <button 
+                    onClick={() => setIsMobileCalendarOpen(false)} 
+                    className="absolute top-4 right-4 p-2 bg-white rounded-full text-gray-400 hover:text-rose-500 shadow-sm z-10"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+                <CalendarSidebar userId={currentUserId} className="sticky! top-0!" />
+            </div>
+        </div>
       </div>
 
       {/* Floating Add Button */}

@@ -38,115 +38,54 @@ export default function Header() {
     };
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20 transition-all">
-            <div className="px-4 py-4 sm:px-6 sm:py-8 flex justify-between items-center max-w-5xl mx-auto w-full gap-2 sm:gap-4">
-                <Link href="/" className="group shrink-0">
-                    <h1 className="text-xl sm:text-3xl font-bold bg-linear-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-1 sm:gap-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-                        {t('appNameHeartSync')} <Heart className="fill-rose-600 text-rose-600 w-4 h-4 sm:w-6 sm:h-6 animate-pulse" />
-                    </h1>
-                    <p className="text-purple-400 text-[10px] sm:text-lg mt-0.5 sm:mt-1 font-cursive transform -rotate-2 group-hover:rotate-0 transition-transform whitespace-nowrap">
-                        {t('appSubtitle')}
-                    </p>
+        <header className="sticky top-0 z-50 flex items-center justify-between border-b border-rose-600/10 bg-[#f8f5f6] backdrop-blur-md px-6 py-3 lg:px-12 transition-all">
+            <div className="flex items-center gap-8">
+                <Link href="/" className="flex items-center gap-2 text-rose-600">
+                    <Heart className="w-8 h-8 font-bold fill-rose-600" />
+                    <h2 className="text-xl font-black tracking-tight">{t('appNameHeartSync') || "HeartSync"}</h2>
                 </Link>
-
-                {/* Desktop Search Bar - hidden on mobile */}
-                <div className="hidden sm:flex flex-1 justify-center max-w-md">
+                <div className="hidden md:flex items-center">
                     <GlobalSearch />
                 </div>
+            </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 sm:gap-3 relative z-50 shrink-0 items-center">
-                    {/* Mobile Search Toggle - visible only on mobile */}
-                    <button
-                        onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                        className="sm:hidden p-2 bg-white border-2 border-blue-100 rounded-full text-blue-400 hover:border-blue-300 hover:text-blue-600 transition-colors shadow-sm"
-                    >
-                        {isMobileSearchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
-                    </button>
+            <div className="flex items-center gap-4 lg:gap-6">
+                <button
+                    onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                    className="md:hidden flex items-center gap-1 text-sm font-medium hover:text-rose-600 transition-colors"
+                >
+                    <Search className="w-5 h-5" />
+                </button>
 
-                    {/* Desktop Language Toggle */}
-                    <button
-                        onClick={() => setLanguage(language === "tr" ? "en" : "tr")}
-                        className="hidden sm:flex w-12 h-12 items-center justify-center bg-white border-2 border-blue-100 rounded-full text-blue-400 hover:border-blue-300 hover:text-blue-600 transition-colors shadow-sm font-bold text-sm"
-                        title={language === "tr" ? "Switch to English" : "Türkçe'ye Geç"}
-                    >
-                        {language === "tr" ? "EN" : "TR"}
-                    </button>
+                <button
+                    onClick={() => setLanguage(language === "tr" ? "en" : "tr")}
+                    className="flex items-center gap-1 text-sm font-medium hover:text-rose-600 transition-colors"
+                    title={language === "tr" ? "Switch to English" : "Türkçe'ye Geç"}
+                >
+                    <span className="font-bold">{language === "tr" ? "EN" : "TR"}</span>
+                    <span className="hidden sm:inline">Language</span>
+                </button>
 
-                    {/* Settings/Logout Dropdown (Keep Logout visible on mobile as requested) */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className="p-2 sm:p-3 bg-white border-2 border-rose-100 rounded-full text-rose-400 hover:border-rose-300 hover:text-rose-600 transition-colors shadow-sm relative focus:outline-none focus:ring-2 focus:ring-rose-200"
-                        >
-                            <LogOut className="w-4 h-4 sm:w-6 sm:h-6" />
-                        </button>
+                <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
-                        {isSettingsOpen && (
-                            <>
-                                {/* Backdrop to close */}
-                                <div className="fixed inset-0 z-40" onClick={() => setIsSettingsOpen(false)} />
+                <button
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-rose-600/20 hover:opacity-90 transition-opacity"
+                >
+                    {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                    <span className="hidden sm:inline">{t('logout') || "Sign out"}</span>
+                </button>
 
-                                <div className="absolute top-full right-0 mt-2 bg-white rounded-2xl shadow-xl border border-rose-100 p-2 min-w-[200px] animate-in fade-in zoom-in-95 origin-top-right z-50">
-                                    <button
-                                        onClick={handleLogout}
-                                        disabled={loggingOut}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors font-medium text-sm"
-                                    >
-                                        {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-                                        {t('logout')}
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Desktop Profile Link */}
-                    <Link href="/profile" className="hidden sm:block p-3 bg-white border-2 border-purple-100 rounded-full text-purple-400 hover:border-purple-300 hover:text-purple-600 transition-colors shadow-sm cursor-pointer">
-                        <User className="w-6 h-6" />
-                    </Link>
-
-                    {/* Mobile Menu Button */}
-                    <button
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="sm:hidden p-2 bg-white border-2 border-purple-100 rounded-full text-purple-400 hover:border-purple-300 hover:text-purple-600 transition-colors shadow-sm"
-                    >
-                        {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-                    </button>
-                </div>
+                <Link href="/profile">
+                    <div className="size-10 rounded-full border-2 border-rose-600/20 bg-center bg-cover" title={t('profile') || "Profile"} style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDd0GCBQxXhpL-2pZjsZHm2ToHtExkzLOrCVIROsIFWiIrQwf-Dhg5_NIHMZh2kSJsVgRrtm4i6e-GHc0cny9T-k0W_fM3Ieru7ViEOg7H6rKY8ouBVIHT2eYegD7SSE2sVhzdnN_tLwEcz1rE8980iloYFpkdnIuHLEaD28OkUK0Zq0oineScLviiRoT5UB-1RGbE286ve8nxwG7beFaS7PVt1CeyvBDN2vnfQxtdpHow3D2CmXQxdTK6URsxUoKmf8AkmX0ULhhM')" }}></div>
+                </Link>
             </div>
 
             {/* Mobile Search Bar - conditionally rendered */}
             {isMobileSearchOpen && (
-                <div className="sm:hidden px-4 pb-4 animate-in slide-in-from-top-2">
+                <div className="md:hidden absolute top-full left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-b border-rose-600/10 shadow-xl animate-in slide-in-from-top-2 z-40">
                     <GlobalSearch />
-                </div>
-            )}
-
-            {/* Mobile Menu Overlay */}
-            {isMobileMenuOpen && (
-                <div className="sm:hidden absolute top-full left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-b border-white/20 shadow-xl animate-in slide-in-from-top-2 flex flex-col gap-3 z-40">
-                    <Link
-                        href="/profile"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 text-purple-700 font-medium"
-                    >
-                        <User className="w-5 h-5" />
-                        {t('profile') || "Profil"}
-                    </Link>
-
-                    <button
-                        onClick={() => {
-                            setLanguage(language === "tr" ? "en" : "tr");
-                            setIsMobileMenuOpen(false);
-                        }}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 text-blue-700 font-medium w-full text-left"
-                    >
-                        <span className="w-5 h-5 flex items-center justify-center font-bold text-xs ring-2 ring-blue-200 rounded-full">
-                            {language === "tr" ? "EN" : "TR"}
-                        </span>
-                        {language === "tr" ? "Switch to English" : "Türkçe'ye Geç"}
-                    </button>
                 </div>
             )}
         </header>

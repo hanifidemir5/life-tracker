@@ -282,10 +282,20 @@ export const translations = {
         appSubtitle: "Sizin dünyanız, sizin anılarınız...",
         collections: "Koleksiyonlar",
         seeAll: "Hepsini Gör",
-        addNewCollection: "Yeni Ekle",
+        addNewCollection: "Yeni Koleksiyon Ekle",
         searchPlaceholderHome: "Anılarda ara...",
         profilePageTitle: "Profil",
         profile: "Profil",
+
+        // Todo Section
+        todoSection: "Yapılacaklar",
+        daily: "Günlük",
+        monthly: "Aylık",
+        yearly: "Yıllık",
+        noTodos: "Henüz bir şey yok... ✨",
+        addTodoPlaceholder: "Bir şey ekle...",
+        partnerTodos: "Partnerim",
+        pastDayLocked: "Geçmiş günlere eklenemez",
     },
     en: {
         // Home Page
@@ -569,10 +579,20 @@ export const translations = {
         appSubtitle: "Your world, your memories...",
         collections: "Collections",
         seeAll: "See All",
-        addNewCollection: "Add New",
+        addNewCollection: "Add New Collection",
         searchPlaceholderHome: "Search memories...",
         profilePageTitle: "Profile",
         profile: "Profile",
+
+        // Todo Section
+        todoSection: "To-Do List",
+        daily: "Daily",
+        monthly: "Monthly",
+        yearly: "Yearly",
+        noTodos: "Nothing here yet... ✨",
+        addTodoPlaceholder: "Add something...",
+        partnerTodos: "Partner",
+        pastDayLocked: "Can't add to past days",
     },
 };
 
