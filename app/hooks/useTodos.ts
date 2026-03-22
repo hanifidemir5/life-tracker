@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/app/lib/supebaseClient";
 
-export type TodoPeriod = "daily" | "monthly" | "yearly";
+export type TodoPeriod = "one-time" | "daily" | "monthly" | "yearly";
 
 export type Todo = {
     id: number;
@@ -17,31 +17,30 @@ export type Todo = {
 export const toISO = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-// Add exactly N months to an ISO date string (handles month-length edge cases)
-function addMonths(iso: string, n: number): string {
-    const [y, m, d] = iso.split("-").map(Number);
-    const result = new Date(y, m - 1 + n, d);
-    return toISO(result);
-}
+export function isTodoDueOn(todo: Pick<Todo, "period" | "due_date">, targetIso: string): boolean {
+    if (!todo.due_date || todo.due_date.length !== 10 || !targetIso || targetIso.length !== 10) return false;
+    
+    const [tY, tM, tD] = todo.due_date.split("-").map(Number);
+    const [tarY, tarM, tarD] = targetIso.split("-").map(Number);
 
-// Add exactly N years to an ISO date string
-function addYears(iso: string, n: number): string {
-    const [y, m, d] = iso.split("-").map(Number);
-    return `${y + n}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
+    const tDate = new Date(tY, tM - 1, tD);
+    const targetDate = new Date(tarY, tarM - 1, tarD);
 
-/**
- * Next due date for a todo:
- *  - daily   → same date (the due_date itself)
- *  - monthly → due_date + 1 month
- *  - yearly  → due_date + 1 year
- */
-export function nextDueDate(todo: Pick<Todo, "period" | "due_date">): string | null {
-    if (!todo.due_date) return null;
-    if (todo.period === "daily") return todo.due_date;
-    if (todo.period === "monthly") return addMonths(todo.due_date, 1);
-    if (todo.period === "yearly") return addYears(todo.due_date, 1);
-    return null;
+    // Can't be due before it's created anchor date
+    if (targetDate < tDate) return false; 
+    
+    switch (todo.period) {
+        case "one-time":
+            return todo.due_date === targetIso;
+        case "daily":
+            return true;
+        case "monthly":
+            return tarD === tD;
+        case "yearly":
+            return tarD === tD && tarM === tM;
+        default:
+            return false;
+    }
 }
 
 /**
@@ -63,20 +62,14 @@ export function useTodosDueOn(userId: string | null, selectedDate: Date) {
 
             if (error) throw error;
 
-            return ((data || []) as Todo[]).filter((t) => {
-                const due = nextDueDate(t);
-                return due === iso;
-            });
+            return ((data || []) as Todo[]).filter((t) => isTodoDueOn(t, iso));
         },
         enabled: !!userId,
     });
 }
 
 /**
- * Returns three Sets of ISO date strings for calendar highlights:
- *  - dailyDates:   exact dates with daily todos
- *  - monthlyDates: next-month due dates (due_date + 1 month)
- *  - yearlyDates:  next-year due dates  (due_date + 1 year)
+ * Returns all active todos to compute calendar dots on the client
  */
 export function useCalendarDots(userId: string | null) {
     return useQuery({
@@ -89,18 +82,7 @@ export function useCalendarDots(userId: string | null) {
 
             if (error) throw error;
 
-            const dailyDates = new Set<string>();
-            const monthlyDates = new Set<string>();
-            const yearlyDates = new Set<string>();
-
-            for (const row of data || []) {
-                if (!row.due_date) continue;
-                if (row.period === "daily") dailyDates.add(row.due_date);
-                if (row.period === "monthly") monthlyDates.add(addMonths(row.due_date, 1));
-                if (row.period === "yearly") yearlyDates.add(addYears(row.due_date, 1));
-            }
-
-            return { dailyDates, monthlyDates, yearlyDates };
+            return (data || []) as Pick<Todo, "period" | "due_date">[];
         },
         enabled: !!userId,
     });
@@ -160,5 +142,28 @@ export function useDeleteTodo() {
             queryClient.invalidateQueries({ queryKey: ["todos-due", variables.userId, variables.selectedISO] });
             queryClient.invalidateQueries({ queryKey: ["todos-dots", variables.userId] });
         },
+    });
+}
+
+// Fetch profiles for a list of user IDs to display real names
+export function useProfiles(userIds: string[]) {
+    return useQuery({
+        queryKey: ["profiles", userIds.sort().join(",")],
+        queryFn: async () => {
+            if (userIds.length === 0) return {};
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("id, display_name")
+                .in("id", userIds);
+
+            if (error) throw error;
+            
+            const profileMap: Record<string, string> = {};
+            for (const row of data || []) {
+                if (row.display_name) profileMap[row.id] = row.display_name;
+            }
+            return profileMap;
+        },
+        enabled: userIds.length > 0,
     });
 }

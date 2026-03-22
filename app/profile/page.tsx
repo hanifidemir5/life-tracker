@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/app/lib/supebaseClient";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { ArrowLeft, Copy, Check, Heart, UserPlus, Loader2, Users, BookOpen, Download } from "lucide-react";
+import { ArrowLeft, Copy, Check, Heart, UserPlus, Loader2, User, BookOpen, Download, Save, FileText, Code } from "lucide-react";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { allDataToCSV, allDataToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
@@ -204,11 +204,11 @@ export default function SettingsPage() {
 
             if (error) throw error;
 
-            toast.info("Bağlantı kesildi.");
+            toast.info(t('disconnected'));
             setCurrentPartner(null);
             router.refresh();
         } catch (error: any) {
-            toast.error("Hata: " + error.message);
+            toast.error(t('error') + ": " + error.message);
         } finally {
             setSaving(false);
         }
@@ -223,186 +223,165 @@ export default function SettingsPage() {
     }
 
     return (
-        <main className={`min-h-screen p-4 flex items-center justify-center`}>
-            <div className={`bg-white w-full max-w-3xl rounded-2xl shadow-2xl border-2 ${isPaired ? 'border-rose-100' : 'border-slate-100'} overflow-hidden`}>
-                {/* Header */}
-                <div className={`bg-gradient-to-r from-rose-400 to-purple-500 p-6 text-white text-center relative`}>
+        <main className={`min-h-screen p-4 sm:p-6 pb-24 ${colors.pageBg}`}>
+            <div className="max-w-3xl mx-auto space-y-6">
+                
+                {/* Hero Banner */}
+                <div className="bg-linear-to-r from-rose-500 to-purple-600 rounded-[2.5rem] p-10 text-white text-center shadow-lg relative overflow-hidden">
                     <button
                         onClick={() => router.push("/")}
-                        className="absolute left-6 top-6 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                        className="absolute left-6 top-6 p-3 bg-white/20 hover:bg-white/30 rounded-full transition-colors z-20 backdrop-blur-md"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                        {isPaired ? (
-                            <Heart className="w-8 h-8 text-white animate-pulse" fill="white" />
-                        ) : (
-                            <BookOpen className="w-8 h-8 text-white" />
-                        )}
+                    <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-md relative z-10 shadow-inner">
+                        <User className="w-10 h-10 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold">{t('profilePageTitle')}</h1>
-                    <p className="text-purple-100 text-sm mt-1">{isPaired ? t('shareLife') : t('shareLifeSingle')}</p>
+                    <h1 className="text-3xl font-black relative z-10 tracking-tight">{t('profilePageTitle') || "Profile"}</h1>
+                    <p className="text-white/90 text-sm mt-2 relative z-10 font-medium">{isPaired ? t('shareLife') : t('shareLifeSingle')}</p>
+                    
+                    {/* Decorative background shapes */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full mix-blend-overlay filter blur-2xl transform translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full mix-blend-overlay filter blur-xl transform -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
                 </div>
 
-                <div className="p-4 sm:p-8 space-y-8">
-
-                    {/* --- PROFILE SETTINGS --- */}
-                    <div className="pb-8 border-b border-rose-100">
-                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Users className="w-5 h-5 text-rose-500" />
-                            {t('myProfile')}
-                        </h2>
-                        <div className="flex flex-col sm:flex-row gap-2">
+                {/* My Profile Card */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                        <User className="w-6 h-6 text-rose-500" />
+                        {t('myProfile')}
+                    </h2>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Name</label>
                             <input
                                 type="text"
                                 placeholder={t('displayPlaceholder')}
-                                className="flex-1 px-4 py-2 border border-rose-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-gray-900 placeholder:text-gray-400 bg-rose-50/30"
+                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none text-slate-800 placeholder:text-slate-400 font-semibold transition-all"
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
                             />
-                            <button
-                                onClick={handleSaveProfile}
-                                disabled={saving}
-                                className="bg-rose-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-rose-600 disabled:opacity-50 shadow-md shadow-rose-200"
-                            >
-                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : t('saveName')}
-                            </button>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">
+                        <button
+                            onClick={handleSaveProfile}
+                            disabled={saving}
+                            className="w-full bg-rose-500 text-white px-6 py-4 rounded-2xl font-bold hover:bg-rose-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-md shadow-rose-200"
+                        >
+                            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                            {t('saveName') || "Save Changes"}
+                        </button>
+                        <p className="text-xs text-gray-400 text-center font-medium mt-4">
                             {t('nameNote')}
                         </p>
                     </div>
+                </div>
 
-                    {/* --- EXPORT DATA SECTION --- */}
-                    <div className="pb-8 border-b border-rose-100">
-                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Download className="w-5 h-5 text-purple-500" />
-                            {t('exportAll')}
+                {/* Download All Data Card */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                    <div className="mb-6">
+                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 mb-2">
+                            <Download className="w-6 h-6 text-rose-500" />
+                            {t('exportAll') || "Download All Data"}
                         </h2>
-                        <p className="text-sm text-gray-500 mb-4">
+                        <p className="text-sm text-slate-400 font-medium pl-9">
                             {t('exportAllDescription') || 'Download all your categories and items as a backup file.'}
                         </p>
-                        <div className="flex flex-wrap gap-3">
-                            <button
-                                onClick={() => handleExportAll("csv")}
-                                disabled={exporting}
-                                className="flex items-center gap-2 px-5 py-3 bg-fuchsia-50 border border-fuchsia-200 text-fuchsia-700 rounded-xl font-medium hover:bg-fuchsia-100 hover:border-fuchsia-300 transition-all disabled:opacity-50"
-                            >
-                                {exporting ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <span className="text-lg">📊</span>
-                                )}
-                                {t('exportAsCSV')}
-                            </button>
-                            <button
-                                onClick={() => handleExportAll("json")}
-                                disabled={exporting}
-                                className="flex items-center gap-2 px-5 py-3 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-100 hover:border-purple-300 transition-all disabled:opacity-50"
-                            >
-                                {exporting ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <span className="text-lg">📄</span>
-                                )}
-                                {t('exportAsJSON')}
-                            </button>
-                        </div>
                     </div>
-                    {currentPartner ? (
-                        <div className="bg-rose-50 border border-rose-100 rounded-xl p-6 text-center animate-in fade-in zoom-in relative group">
-                            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Heart className="w-6 h-6 fill-current" />
-                            </div>
-                            <h3 className="text-lg font-bold text-rose-800 mb-1">{t('connectionActive')}</h3>
-                            <p className="text-rose-600 text-sm mb-2">{t('matchedMessage')}</p>
-                            <div className="text-xs text-rose-500 font-mono bg-white inline-block px-2 py-1 rounded border border-rose-200 mb-4">
-                                {currentPartner}
-                            </div>
-
-                            <button
-                                onClick={handleDisconnect}
-                                disabled={saving}
-                                className="w-full py-2 bg-white border border-rose-200 text-rose-600 rounded-lg text-sm font-medium hover:bg-rose-50 transition-colors flex items-center justify-center gap-2"
-                            >
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('disconnect')}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-center">
-                            <p className="text-purple-800 text-sm font-medium">{t('notMatchedMessage')}</p>
-                        </div>
-                    )}
-
-
-                    {/* My Code */}
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
-                            {t('yourCode')}
-                        </label>
-                        <div
-                            onClick={handleCopy}
-                            className="group relative flex items-center justify-between p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-all"
+                    <div className="flex flex-col sm:flex-row gap-4 pl-0 sm:pl-9">
+                        <button
+                            onClick={() => handleExportAll("csv")}
+                            disabled={exporting}
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-50 text-slate-700 rounded-2xl font-bold hover:bg-gray-100 transition-colors disabled:opacity-50 shrink-0"
                         >
-                            <code className="text-sm font-mono text-gray-700 font-semibold break-all mr-2">
-                                {userId}
-                            </code>
-                            <div className="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                                {isCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-rose-500" />}
-                            </div>
-                            {isCopied && (
-                                <span className="absolute -top-8 right-0 bg-black text-white text-xs py-1 px-2 rounded shadow-lg animate-in fade-in slide-in-from-bottom-2">
-                                    {t('copied')}
-                                </span>
-                            )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">
-                            {t('shareCode')}
-                        </p>
+                            {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-rose-500"><FileText className="w-5 h-5" /></span>}
+                            Download as CSV
+                        </button>
+                        <button
+                            onClick={() => handleExportAll("json")}
+                            disabled={exporting}
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-50 text-slate-700 rounded-2xl font-bold hover:bg-gray-100 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                            {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-rose-500"><Code className="w-5 h-5" /></span>}
+                            Download as JSON
+                        </button>
                     </div>
+                </div>
 
-
-                    {/* Enter Partner Code */}
-                    {!currentPartner && (
-                        <>
-                            <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200"></div>
-                                </div>
-                                <div className="relative flex justify-center text-sm">
-                                    <span className="px-2 bg-white text-gray-500 font-medium">{t('or')}</span>
+                {/* Connection Status Card */}
+                {currentPartner ? (
+                    <div className="bg-rose-50 border border-rose-100 p-6 sm:p-8 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+                        <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left w-full sm:w-auto">
+                            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shrink-0 shadow-sm relative">
+                                <Heart className="w-7 h-7 text-rose-500 fill-rose-500" />
+                                <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full"></div>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-800 mb-1">{t('connectionActive') || "Connection Active!"}</h3>
+                                <p className="text-slate-500 text-sm font-medium mb-1">{t('matchedMessage') || "You are matched with your partner."}</p>
+                                <div className="text-[10px] text-slate-400 font-mono bg-white inline-block px-2 py-1 rounded-md border border-gray-100">
+                                    {currentPartner}
                                 </div>
                             </div>
-                            <form onSubmit={handleConnect} className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
-                                        {t('partnerCode')}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={partnerId}
-                                        onChange={(e) => setPartnerId(e.target.value)}
-                                        placeholder={t('partnerCodePlaceholder')}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all text-gray-900 placeholder:text-gray-400"
-                                    />
+                        </div>
+                        <div className="shrink-0 flex flex-col items-center sm:items-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+                            <span className="bg-rose-100 text-rose-600 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full">{t('linked') || "LINKED"}</span>
+                            <button onClick={handleDisconnect} disabled={saving} className="text-xs font-bold text-rose-500 hover:text-rose-600 underline">
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (t('disconnect') || "Disconnect")}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                        <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                            <UserPlus className="w-6 h-6 text-rose-500" />
+                            Partner Connection
+                        </h2>
+                        
+                        <div className="mb-8">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">{t('yourCode')}</label>
+                            <div
+                                onClick={handleCopy}
+                                className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors group"
+                            >
+                                <code className="text-sm font-mono text-slate-700 font-bold tracking-tight">{userId}</code>
+                                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                    {isCopied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-4 h-4 text-slate-400" />}
                                 </div>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-3 font-medium">{t('shareCode')}</p>
+                        </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    {saving ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <UserPlus className="w-5 h-5" />
-                                    )}
-                                    {saving ? "Connecting..." : t('addPartner')}
-                                </button>
-                            </form>
-                        </>
-                    )}
-                </div>
+                        <div className="relative mb-8">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-100"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-4 bg-white text-slate-300 font-black uppercase tracking-widest text-[10px]">{t('or') || "OR"}</span>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleConnect} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">{t('partnerCode')}</label>
+                                <input
+                                    type="text"
+                                    value={partnerId}
+                                    onChange={(e) => setPartnerId(e.target.value)}
+                                    placeholder={t('partnerCodePlaceholder')}
+                                    className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none text-slate-800 placeholder:text-slate-400 font-semibold transition-all"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="w-full bg-slate-800 text-white px-6 py-4 rounded-2xl font-bold hover:bg-slate-900 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shadow-md shadow-slate-200"
+                            >
+                                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+                                {t('addPartner')}
+                            </button>
+                        </form>
+                    </div>
+                )}
             </div>
         </main>
     );

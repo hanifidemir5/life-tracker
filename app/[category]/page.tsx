@@ -23,6 +23,8 @@ import {
   ArrowRightLeft,
   Calendar,
   X,
+  MoreVertical,
+  Check,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
@@ -91,6 +93,11 @@ export default function CategoryPage() {
   const [showBulkImport, setShowBulkImport] = useState(false);
 
   const [isMobileCalendarOpen, setIsMobileCalendarOpen] = useState(false);
+  const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
+
+  const toggleExpand = (id: number) => {
+    setExpandedItemId((prev) => (prev === id ? null : id));
+  };
 
   // React Query hooks
   const { data: paginatedData, isLoading: itemsLoading } = useItems(currentCategoryKey, currentPage);
@@ -634,160 +641,199 @@ export default function CategoryPage() {
 
         {/* LİSTE */}
         <div className="grid grid-cols-1 gap-4 z-0">
-          {localItems.map((item) => (
-            <div
-              key={item.id}
-              ref={(el) => { itemRefs.current[item.id] = el; }}
-              onClick={() => isSelectionMode ? toggleItemSelection(item.id) : router.push(`/detail/${item.id}?page=${currentPage}&category=${currentCategoryKey}`)}
-              className={`bg-white rounded-2xl shadow-md hover:shadow-xl border transition-all cursor-pointer overflow-hidden group relative
-                ${highlightedItemId === String(item.id) ? 'ring-4 ring-yellow-400 animate-pulse' : ''}
-                ${selectedItems.has(item.id)
-                  ? `border-2 border-current ring-2 ring-opacity-50 ${colors.primaryLight} ${colors.primary}`
-                  : pendingUpdates.hasOwnProperty(item.id)
-                    ? `border-2 border-dashed ${colors.borderLight}`
-                    : `border-gray-100 hover:border-gray-200`
-                }`}
-            >
-              {/* Selection Checkbox */}
-              {isSelectionMode && (
-                <div
-                  className={`absolute top-3 left-3 z-10 p-1.5 rounded-full shadow-md transition-colors ${selectedItems.has(item.id) ? `bg-linear-to-br ${colors.buttonGradient} text-white` : "bg-white/90 text-gray-400"
-                    }`}
-                >
-                  {selectedItems.has(item.id) ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
-                </div>
-              )}
+          {localItems.map((item) => {
+            const isExpanded = expandedItemId === item.id;
+            const validImages = item.image_urls?.filter(url => url && typeof url === 'string' && url.trim() !== "") || [];
+            const hasImage = validImages.length > 0;
+            const heroImage = hasImage ? validImages[photoSlideIndex[item.id] || 0] : null;
 
-              {/* Hero Image */}
-              {item.image_urls && item.image_urls.length > 0 && (
-                <div className="relative w-full h-56 sm:h-72 overflow-hidden bg-gray-100">
-                  <img
-                    src={item.image_urls[photoSlideIndex[item.id] || 0]}
-                    alt={`${item.title}`}
-                    className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${!item.status ? 'grayscale' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(item.image_urls![photoSlideIndex[item.id] || 0], '_blank');
-                    }}
-                  />
-                  {/* Photo counter badge */}
-                  {item.image_urls.length > 1 && (
-                    <>
-                      <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full font-medium backdrop-blur-sm">
-                        {(photoSlideIndex[item.id] || 0) + 1}/{item.image_urls.length}
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const currentIdx = photoSlideIndex[item.id] || 0;
-                          const newIdx = currentIdx === 0 ? item.image_urls!.length - 1 : currentIdx - 1;
-                          setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
-                        }}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-lg transition-opacity opacity-0 group-hover:opacity-100"
-                      >
-                        <ChevronLeft className="w-4 h-4 text-gray-700" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const currentIdx = photoSlideIndex[item.id] || 0;
-                          const newIdx = currentIdx === item.image_urls!.length - 1 ? 0 : currentIdx + 1;
-                          setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-lg transition-opacity opacity-0 group-hover:opacity-100"
-                      >
-                        <ChevronRight className="w-4 h-4 text-gray-700" />
-                      </button>
-                    </>
-                  )}
-                  {/* Status overlay on image */}
-                  <div className="absolute bottom-3 left-3">
-                    <span className={`inline-flex items-center gap-1 text-xs uppercase font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-sm ${item.status ? "bg-green-500/90 text-white" : "bg-amber-500/90 text-white"}`}>
-                      {item.status ? (<><CheckCheck className="w-3 h-3" /> {t('completed')}</>) : (<><Clock className="w-3 h-3" /> {t('pending')}</>)}
-                    </span>
+            return (
+              <div
+                key={item.id}
+                ref={(el) => { itemRefs.current[item.id] = el; }}
+                onClick={() => isSelectionMode ? toggleItemSelection(item.id) : toggleExpand(item.id)}
+                className={`bg-white rounded-4xl shadow-sm hover:shadow-md border transition-all duration-300 cursor-pointer overflow-hidden group relative
+                  ${highlightedItemId === String(item.id) ? 'ring-4 ring-yellow-400 animate-pulse' : ''}
+                  ${selectedItems.has(item.id)
+                    ? `border-2 border-current ring-2 ring-opacity-50 ${colors.primaryLight} ${colors.primary}`
+                    : pendingUpdates.hasOwnProperty(item.id)
+                      ? `border-2 border-dashed ${colors.borderLight}`
+                      : `border-gray-100 hover:border-gray-200`
+                  }
+                  ${isExpanded ? 'p-6' : `p-4 flex items-center gap-4 ${isSelectionMode ? 'pl-14' : ''}`}`}
+              >
+                {/* Selection Checkbox */}
+                {isSelectionMode && (
+                  <div
+                    className={`absolute z-20 p-1.5 rounded-full shadow-md transition-colors ${isExpanded ? 'top-4 left-4' : 'top-1/2 -translate-y-1/2 left-4'} ${selectedItems.has(item.id) ? `bg-linear-to-br ${colors.buttonGradient} text-white` : "bg-white text-gray-400"}`}
+                  >
+                    {selectedItems.has(item.id) ? <CheckCircle className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                   </div>
-                </div>
-              )}
-
-              {/* Card Body */}
-              <div className="p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {/* Category icon (shown only when no image) */}
-                    {(!item.image_urls || item.image_urls.length === 0) && (
-                      <div className={`p-2.5 rounded-xl shrink-0 ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
-                        {categoryData && getIconComponent(categoryData.icon_name, `w-5 h-5 ${getIconColorClass(categoryData.color_class)}`)}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`font-bold text-base sm:text-lg leading-tight ${item.status ? "text-gray-500 line-through decoration-1" : "text-gray-900"}`}>
-                        {item.title}
-                      </h3>
-                      {/* Status badge (shown only when no image) */}
-                      {(!item.image_urls || item.image_urls.length === 0) && (
-                        <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full mt-1.5 ${item.status ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                          {item.status ? (<><CheckCheck className="w-3 h-3" /> {t('completed')}</>) : (<><Clock className="w-3 h-3" /> {t('pending')}</>)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Date */}
-                  {item.created_at && (
-                    <span className="text-sm font-semibold text-rose-500 whitespace-nowrap shrink-0">
-                      {new Date(item.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </span>
-                  )}
-                </div>
-
-                {/* Description */}
-                {item.description && (
-                  <p className="text-sm text-gray-500 italic mt-2.5 leading-relaxed line-clamp-2">
-                    &ldquo;{item.description}&rdquo;
-                  </p>
                 )}
 
-                {/* Footer: Owner + Actions */}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
-                    {item.owner && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
-                        <User className="w-3 h-3" />{item.owner}
-                      </span>
+                {isExpanded ? (
+                  /* --- EXPANDED VIEW --- */
+                  <div className="flex flex-col sm:flex-row gap-6 w-full">
+                    {/* Left: Big Image */}
+                    {hasImage ? (
+                      <div className="w-full sm:w-1/3 shrink-0 relative aspect-2/3 rounded-2xl overflow-hidden shadow-lg bg-gray-100">
+                        <img
+                          src={heroImage!}
+                          alt={item.title}
+                          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${!item.status ? 'grayscale' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(heroImage!, '_blank');
+                          }}
+                        />
+                        {/* Image Nav & Count */}
+                        {validImages.length > 1 && (
+                          <>
+                            <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full font-medium backdrop-blur-sm z-10">
+                              {(photoSlideIndex[item.id] || 0) + 1}/{validImages.length}
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const currentIdx = photoSlideIndex[item.id] || 0;
+                                const newIdx = currentIdx === 0 ? validImages.length - 1 : currentIdx - 1;
+                                setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
+                              }}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-lg transition-opacity opacity-0 group-hover:opacity-100 z-10"
+                            >
+                              <ChevronLeft className="w-4 h-4 text-gray-700" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const currentIdx = photoSlideIndex[item.id] || 0;
+                                const newIdx = currentIdx === validImages.length - 1 ? 0 : currentIdx + 1;
+                                setPhotoSlideIndex(prev => ({ ...prev, [item.id]: newIdx }));
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-lg transition-opacity opacity-0 group-hover:opacity-100 z-10"
+                            >
+                              <ChevronRight className="w-4 h-4 text-gray-700" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={`w-full sm:w-1/3 shrink-0 relative aspect-2/3 rounded-2xl flex items-center justify-center shadow-inner ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
+                        {categoryData && getIconComponent(categoryData.icon_name, `w-16 h-16 opacity-50 ${getIconColorClass(categoryData.color_class)}`)}
+                      </div>
                     )}
-                  </div>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1">
-                    <Link
-                      href={`/update/${item.id}?page=${currentPage}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      title={t('edit')}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Link>
-                    <button
-                      onClick={(e) => handleDelete(e, item.id)}
-                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      title={t('delete')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStatus(item.id, item.status);
-                      }}
-                      className="p-1 hover:scale-110 transition-transform"
-                    >
-                      {item.status ? <CheckCircle className="w-7 h-7 text-green-500" /> : <Circle className="w-7 h-7 text-gray-300 hover:text-blue-400" />}
-                    </button>
+                    {/* Right: Content */}
+                    <div className="flex flex-col flex-1 py-1 sm:min-w-0">
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {hasImage && <span className="text-[10px] bg-pink-100 text-pink-600 font-bold px-2 py-1 rounded-full uppercase tracking-wider">{t('featuredContent')}</span>}
+                        {item.status ? (
+                            <span className="text-[10px] bg-emerald-100 text-emerald-600 font-bold px-2 py-1 rounded-full uppercase tracking-wider">{t('completed')}</span>
+                        ) : (
+                            <span className="text-[10px] bg-amber-100 text-amber-600 font-bold px-2 py-1 rounded-full uppercase tracking-wider">{t('pending')}</span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-start justify-between gap-4">
+                        <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mb-2 truncate">{item.title}</h2>
+                        {/* More Options / Edit Button Desktop */}
+                        <div className="flex items-center gap-1 shrink-0 -mt-1">
+                          <Link
+                            href={`/update/${item.id}?page=${currentPage}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2.5 bg-gray-50 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors shadow-sm"
+                            title={t('edit')}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={(e) => handleDelete(e, item.id)}
+                            className="p-2.5 bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors shadow-sm"
+                            title={t('delete')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-slate-500 pt-1 pb-4 leading-relaxed line-clamp-6">
+                        {item.description ? item.description : <span className="italic opacity-50">{t('emptyDescription')}</span>}
+                      </p>
+
+                      <div className="mt-auto" />
+
+                      {/* Bottom row */}
+                      <div className="flex justify-between items-end mt-4 pt-4 border-t border-gray-100">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('releaseDate')}</p>
+                          <p className="text-sm font-semibold text-slate-700">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : "-"}
+                          </p>
+                        </div>
+
+                        {/* Checkmark Button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleStatus(item.id, item.status); }}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform hover:scale-105 shadow-md shrink-0 ${item.status ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-gray-100 hover:bg-gray-200'}`}
+                        >
+                          {item.status ? <Check className="w-6 h-6 text-white" /> : <Clock className="w-5 h-5 text-gray-400" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* --- COLLAPSED VIEW --- */
+                  <>
+                    {/* Left: Small Image */}
+                    {hasImage ? (
+                      <div className="w-14 h-20 sm:w-16 sm:h-24 shrink-0 rounded-xl overflow-hidden shadow-sm bg-gray-100 flex items-center justify-center">
+                        <img
+                          src={heroImage!}
+                          alt={item.title}
+                          className={`w-full h-full object-cover ${!item.status ? 'grayscale' : ''}`}
+                        />
+                      </div>
+                    ) : (
+                      <div className={`w-14 h-20 sm:w-16 sm:h-24 shrink-0 rounded-xl flex items-center justify-center shadow-inner ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
+                        {categoryData && getIconComponent(categoryData.icon_name, `w-6 h-6 sm:w-8 sm:h-8 opacity-50 ${getIconColorClass(categoryData.color_class)}`)}
+                      </div>
+                    )}
+
+                    {/* Middle: Text */}
+                    <div className="flex-1 min-w-0 pr-2">
+                      <h3 className={`text-base sm:text-lg font-bold truncate leading-tight tracking-tight ${item.status ? "text-slate-500 line-through decoration-slate-400" : "text-slate-800"}`}>
+                        {item.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate mt-1 tracking-wide">
+                        {item.owner ? item.owner : (categoryData?.name || "Item")} &bull; {item.created_at ? new Date(item.created_at).getFullYear() : ""}
+                      </p>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="shrink-0 flex items-center gap-1 sm:gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleStatus(item.id, item.status); }}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${item.status ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-50 border border-gray-200 text-gray-300 hover:bg-gray-100'}`}
+                        >
+                          {item.status ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-gray-300" />}
+                        </button>
+
+                        <button 
+                          onClick={(e) => { 
+                             e.stopPropagation(); 
+                             router.push(`/update/${item.id}?page=${currentPage}`); 
+                          }} 
+                          className="p-2 sm:p-2.5 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-50 transition-colors rounded-full"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
 
 

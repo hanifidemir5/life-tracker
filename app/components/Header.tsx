@@ -77,8 +77,8 @@ export default function Header() {
                     <span className="hidden sm:inline">{t('logout') || "Sign out"}</span>
                 </button>
 
-                <Link href="/profile">
-                    <div className="size-10 rounded-full border-2 border-rose-600/20 bg-center bg-cover" title={t('profile') || "Profile"} style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDd0GCBQxXhpL-2pZjsZHm2ToHtExkzLOrCVIROsIFWiIrQwf-Dhg5_NIHMZh2kSJsVgRrtm4i6e-GHc0cny9T-k0W_fM3Ieru7ViEOg7H6rKY8ouBVIHT2eYegD7SSE2sVhzdnN_tLwEcz1rE8980iloYFpkdnIuHLEaD28OkUK0Zq0oineScLviiRoT5UB-1RGbE286ve8nxwG7beFaS7PVt1CeyvBDN2vnfQxtdpHow3D2CmXQxdTK6URsxUoKmf8AkmX0ULhhM')" }}></div>
+                <Link href="/profile" className="flex items-center justify-center size-10 rounded-full border-2 border-rose-600/20 bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 transition-colors shadow-sm" title={t('profile') || "Profile"}>
+                    <User className="w-5 h-5 fill-current" />
                 </Link>
             </div>
 
