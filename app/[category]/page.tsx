@@ -660,7 +660,7 @@ export default function CategoryPage() {
                       ? `border-2 border-dashed ${colors.borderLight}`
                       : `border-gray-100 hover:border-gray-200`
                   }
-                  ${isExpanded ? 'p-6' : `p-4 flex items-center gap-4 ${isSelectionMode ? 'pl-14' : ''}`}`}
+                  ${isExpanded ? 'p-4 sm:p-6' : `p-4 flex items-center gap-4 ${isSelectionMode ? 'pl-14' : ''}`}`}
               >
                 {/* Selection Checkbox */}
                 {isSelectionMode && (
@@ -676,7 +676,7 @@ export default function CategoryPage() {
                   <div className="flex flex-col sm:flex-row gap-6 w-full">
                     {/* Left: Big Image */}
                     {hasImage ? (
-                      <div className="w-full sm:w-1/3 shrink-0 relative aspect-2/3 rounded-2xl overflow-hidden shadow-lg bg-gray-100">
+                      <div className="w-full sm:w-1/3 shrink-0 relative h-56 sm:h-auto sm:aspect-2/3 rounded-2xl overflow-hidden shadow-lg bg-gray-100">
                         <img
                           src={heroImage!}
                           alt={item.title}
@@ -718,7 +718,7 @@ export default function CategoryPage() {
                         )}
                       </div>
                     ) : (
-                      <div className={`w-full sm:w-1/3 shrink-0 relative aspect-2/3 rounded-2xl flex items-center justify-center shadow-inner ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
+                      <div className={`w-full sm:w-1/3 shrink-0 relative h-56 sm:h-auto sm:aspect-2/3 rounded-2xl flex items-center justify-center shadow-inner ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
                         {categoryData && getIconComponent(categoryData.icon_name, `w-16 h-16 opacity-50 ${getIconColorClass(categoryData.color_class)}`)}
                       </div>
                     )}
@@ -736,7 +736,7 @@ export default function CategoryPage() {
                       </div>
                       
                       <div className="flex items-start justify-between gap-4">
-                        <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mb-2 truncate">{item.title}</h2>
+                        <h2 className="text-xl sm:text-3xl font-black text-slate-800 tracking-tight mb-2 break-words whitespace-normal">{item.title}</h2>
                         {/* More Options / Edit Button Desktop */}
                         <div className="flex items-center gap-1 shrink-0 -mt-1">
                           <Link
@@ -757,7 +757,7 @@ export default function CategoryPage() {
                         </div>
                       </div>
 
-                      <p className="text-sm text-slate-500 pt-1 pb-4 leading-relaxed line-clamp-6">
+                      <p className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed">
                         {item.description ? item.description : <span className="italic opacity-50">{t('emptyDescription')}</span>}
                       </p>
 
