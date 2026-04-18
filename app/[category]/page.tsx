@@ -675,7 +675,7 @@ export default function CategoryPage() {
                   /* --- EXPANDED VIEW --- */
                   <div className="flex flex-col sm:flex-row gap-6 w-full">
                     {/* Left: Big Image */}
-                    {hasImage ? (
+                    {hasImage && (
                       <div className="w-full sm:w-1/3 shrink-0 relative h-56 sm:h-auto sm:aspect-2/3 rounded-2xl overflow-hidden shadow-lg bg-gray-100">
                         <img
                           src={heroImage!}
@@ -716,10 +716,6 @@ export default function CategoryPage() {
                             </button>
                           </>
                         )}
-                      </div>
-                    ) : (
-                      <div className={`w-full sm:w-1/3 shrink-0 relative h-56 sm:h-auto sm:aspect-2/3 rounded-2xl flex items-center justify-center shadow-inner ${categoryData?.color_class.replace("hover:", "") || "bg-gray-50"}`}>
-                        {categoryData && getIconComponent(categoryData.icon_name, `w-16 h-16 opacity-50 ${getIconColorClass(categoryData.color_class)}`)}
                       </div>
                     )}
 
