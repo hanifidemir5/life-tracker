@@ -443,8 +443,8 @@ export default function CategoryPage() {
 
   return (
     <main className="min-h-screen p-8 pb-32">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
-        <div className="flex-1 min-w-0 order-last lg:order-first">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start lg:justify-between">
+        <div className="flex-1 w-full max-w-4xl mx-auto min-w-0 order-last lg:order-first">
         {/* HEADER */}
         <div className="flex flex-col gap-3 mb-6 relative z-20">
           {/* TOP ROW: Title Section */}
@@ -756,7 +756,7 @@ export default function CategoryPage() {
 
                       <div 
                         className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none" 
-                        style={{ tabSize: 4, WebkitTabSize: 4 }}
+                        style={{ tabSize: 4 }}
                       >
                         {item.description ? parse(item.description) : <span className="italic opacity-50">{t('emptyDescription')}</span>}
                       </div>
