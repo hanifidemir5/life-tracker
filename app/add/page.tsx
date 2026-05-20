@@ -379,7 +379,7 @@ export default function AddItemPage() {
               <textarea
                 rows={3}
                 placeholder={t('descriptionPlaceholder')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-400 resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-400 resize-y min-h-[100px]"
                 {...register("description")}
               />
             </div>

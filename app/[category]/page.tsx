@@ -753,9 +753,12 @@ export default function CategoryPage() {
                         </div>
                       </div>
 
-                      <p className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed">
+                      <div 
+                        className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed whitespace-pre-wrap break-words" 
+                        style={{ tabSize: 4, WebkitTabSize: 4 }}
+                      >
                         {item.description ? item.description : <span className="italic opacity-50">{t('emptyDescription')}</span>}
-                      </p>
+                      </div>
 
                       <div className="mt-auto" />
 

@@ -522,7 +522,7 @@ export default function UpdateItemPage() {
             </label>
             <textarea
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y min-h-[100px]"
               {...register("description")}
             />
           </div>
