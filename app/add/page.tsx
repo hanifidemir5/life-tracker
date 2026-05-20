@@ -18,6 +18,9 @@ import { useTheme } from "@/app/contexts/ThemeContext";
 import { itemSchema, ItemFormData } from "@/app/lib/schemas";
 import { useInvalidateItems } from "@/app/hooks/useItems";
 import { useInvalidateCategories, useCategories, Category } from "@/app/hooks/useCategories";
+import dynamic from "next/dynamic";
+
+const JoditEditor = dynamic(() => import("jodit-react"), { ssr: false });
 
 export default function AddItemPage() {
   const router = useRouter();
@@ -376,12 +379,19 @@ export default function AddItemPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('description')}
               </label>
-              <textarea
-                rows={3}
-                placeholder={t('descriptionPlaceholder')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-400 resize-y min-h-[100px]"
-                {...register("description")}
+              <JoditEditor
+                value={watch("description") || ""}
+                config={{
+                  readonly: false,
+                  placeholder: t('descriptionPlaceholder') || "Enter description...",
+                  height: 300,
+                  toolbarAdaptive: false,
+                }}
+                onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
               />
+              {errors.description && (
+                <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>
+              )}
             </div>
 
             <div>

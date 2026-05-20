@@ -21,7 +21,9 @@ import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { itemSchema, ItemFormData } from "@/app/lib/schemas";
 import { useInvalidateItems } from "@/app/hooks/useItems";
+import dynamic from "next/dynamic";
 
+const JoditEditor = dynamic(() => import("jodit-react"), { ssr: false });
 type Category = {
   id: number;
   key: string;
@@ -520,11 +522,19 @@ export default function UpdateItemPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t('notes')}
             </label>
-            <textarea
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y min-h-[100px]"
-              {...register("description")}
+            <JoditEditor
+              value={watch("description") || ""}
+              config={{
+                readonly: false,
+                placeholder: t('descriptionPlaceholder') || "Enter description...",
+                height: 300,
+                toolbarAdaptive: false,
+              }}
+              onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
             />
+            {errors.description && (
+              <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>
+            )}
           </div>
 
           {/* PHOTO SECTION */}

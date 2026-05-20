@@ -37,6 +37,7 @@ import { itemsToCSV, itemsToJSON, downloadFile, getExportFilename } from "@/app/
 import ConfirmModal from "@/app/components/ConfirmModal";
 import BulkImportModal from "@/app/components/BulkImportModal";
 import CalendarSidebar from "@/app/components/TodoSection";
+import parse from "html-react-parser";
 
 export default function CategoryPage() {
   const params = useParams();
@@ -754,10 +755,10 @@ export default function CategoryPage() {
                       </div>
 
                       <div 
-                        className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed whitespace-pre-wrap break-words" 
+                        className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none" 
                         style={{ tabSize: 4, WebkitTabSize: 4 }}
                       >
-                        {item.description ? item.description : <span className="italic opacity-50">{t('emptyDescription')}</span>}
+                        {item.description ? parse(item.description) : <span className="italic opacity-50">{t('emptyDescription')}</span>}
                       </div>
 
                       <div className="mt-auto" />
