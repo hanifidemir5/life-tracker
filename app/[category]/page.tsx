@@ -755,7 +755,7 @@ export default function CategoryPage() {
                       </div>
 
                       <div 
-                        className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none" 
+                        className="text-xs sm:text-sm text-slate-500 pt-1 pb-4 leading-relaxed whitespace-pre-wrap break-words prose prose-sm max-w-none prose-p:my-0" 
                         style={{ tabSize: 4 }}
                       >
                         {item.description ? parse(item.description) : <span className="italic opacity-50">{t('emptyDescription')}</span>}
