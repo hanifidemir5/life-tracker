@@ -529,6 +529,9 @@ export default function UpdateItemPage() {
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
                 height: 300,
                 toolbarAdaptive: false,
+                askBeforePasteHTML: false,
+                askBeforePasteFromWord: false,
+                defaultActionOnPaste: "insert_as_html",
               }}
               onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
             />
