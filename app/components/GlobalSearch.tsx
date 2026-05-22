@@ -179,7 +179,7 @@ export default function GlobalSearch() {
                         onChange={(e) => setQuery(e.target.value)}
                         onFocus={() => setIsFocused(true)}
                         onKeyDown={handleKeyDown}
-                        placeholder={searchCategory === "" ? (t('selectCategoryFirst') || 'Select a category to search...') : (t('searchPlaceholder') || 'Search collections...')}
+                        placeholder={searchCategory === "" ? ((t as any)('selectCategoryFirst') || 'Select a category to search...') : (t('searchPlaceholder') || 'Search collections...')}
                         disabled={searchCategory === ""}
                         className="w-full bg-transparent py-2.5 pl-9 pr-10 text-sm focus:outline-none text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     />

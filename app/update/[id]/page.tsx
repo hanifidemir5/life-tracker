@@ -527,7 +527,7 @@ export default function UpdateItemPage() {
               {t('notes')}
             </label>
             <JoditEditor
-              value={initialDesc}
+              value={watch("description") || ""}
               config={{
                 readonly: false,
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
@@ -539,7 +539,8 @@ export default function UpdateItemPage() {
                 askBeforePasteFromWord: false,
                 defaultActionOnPaste: "insert_as_html",
               }}
-              onChange={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+              onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+              onChange={() => {}}
             />
             {errors.description && (
               <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>

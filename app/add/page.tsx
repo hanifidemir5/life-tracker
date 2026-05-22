@@ -379,8 +379,8 @@ export default function AddItemPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('description')}
               </label>
-              <JoditEditor
-              value={""}
+            <JoditEditor
+              value={watch("description") || ""}
               config={{
                 readonly: false,
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
@@ -392,7 +392,8 @@ export default function AddItemPage() {
                 askBeforePasteFromWord: false,
                 defaultActionOnPaste: "insert_as_html",
               }}
-              onChange={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+              onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+              onChange={() => {}}
             />
               {errors.description && (
                 <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>

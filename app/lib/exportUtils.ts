@@ -66,19 +66,19 @@ export function itemsToWord(items: Item[], categoryName: string): string {
                 const statusClass = item.status ? "completed" : "";
                 const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : "";
                 
-                return \`
+                return `
                     <div class="item">
-                        <span class="status-badge \${statusClass}">\${statusStr}</span>
-                        <div class="item-title">\${escapeHtml(item.title)}</div>
+                        <span class="status-badge ${statusClass}">${statusStr}</span>
+                        <div class="item-title">${escapeHtml(item.title)}</div>
                         <div class="meta-info">
-                            Tarih: \${dateStr} | Kategori: \${escapeHtml(categoryName)} | Sahip: \${escapeHtml(item.owner || "")}
+                            Tarih: ${dateStr} | Kategori: ${escapeHtml(categoryName)} | Sahip: ${escapeHtml(item.owner || "")}
                         </div>
                         <div class="content">
-                            \${item.description || ""}
+                            ${item.description || ""}
                         </div>
                         <hr class="divider" />
                     </div>
-                \`;
+                `;
             }).join("")}
         </body>
         </html>
