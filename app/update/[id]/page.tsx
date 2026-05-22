@@ -77,6 +77,9 @@ export default function UpdateItemPage() {
   // Date state separately (schema doesn't enforce it, supabase handles it)
   const [itemDate, setItemDate] = useState("");
 
+  // JoditEditor initial content state (to prevent cursor jumps caused by watch())
+  const [initialDesc, setInitialDesc] = useState("");
+
   // Photo upload state (max 5 photos)
   const MAX_PHOTOS = 5;
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]); // URLs from database
@@ -155,6 +158,7 @@ export default function UpdateItemPage() {
             status: itemData.status,
           });
           setItemDate(itemData.created_at ? itemData.created_at.split('T')[0] : "");
+          setInitialDesc(itemData.description || "");
 
           // Load existing photos
           if (itemData.image_urls && Array.isArray(itemData.image_urls)) {
@@ -523,7 +527,7 @@ export default function UpdateItemPage() {
               {t('notes')}
             </label>
             <JoditEditor
-              value={watch("description") || ""}
+              value={initialDesc}
               config={{
                 readonly: false,
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
@@ -533,7 +537,7 @@ export default function UpdateItemPage() {
                 askBeforePasteFromWord: false,
                 defaultActionOnPaste: "insert_as_html",
               }}
-              onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+              onChange={(newContent) => setValue("description", newContent, { shouldValidate: true })}
             />
             {errors.description && (
               <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>

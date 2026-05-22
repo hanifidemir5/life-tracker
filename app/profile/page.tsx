@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { ArrowLeft, Copy, Check, Heart, UserPlus, Loader2, User, BookOpen, Download, Save, FileText, Code } from "lucide-react";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
-import { allDataToCSV, allDataToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
+import { allDataToCSV, allDataToJSON, allDataToWord, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
 import { Category } from "@/app/hooks/useCategories";
 import { Item } from "@/app/hooks/useItems";
 
@@ -92,7 +92,7 @@ export default function SettingsPage() {
     };
 
     // Export all data
-    const handleExportAll = async (type: "csv" | "json") => {
+    const handleExportAll = async (type: "csv" | "json" | "doc") => {
         setExporting(true);
         try {
             // Fetch all categories
@@ -125,10 +125,14 @@ export default function SettingsPage() {
                 const csvContent = allDataToCSV(categories as Category[], itemsByCategory);
                 const filename = getExportFilename("all_data", "csv");
                 downloadFile(csvContent, filename, "csv");
-            } else {
+            } else if (type === "json") {
                 const jsonContent = allDataToJSON(categories as Category[], itemsByCategory);
                 const filename = getExportFilename("all_data", "json");
                 downloadFile(jsonContent, filename, "json");
+            } else if (type === "doc") {
+                const docContent = allDataToWord(categories as Category[], itemsByCategory);
+                const filename = getExportFilename("all_data", "doc");
+                downloadFile(docContent, filename, "doc");
             }
 
             toast.success(t('exportSuccess'));
@@ -303,6 +307,14 @@ export default function SettingsPage() {
                         >
                             {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-rose-500"><Code className="w-5 h-5" /></span>}
                             Download as JSON
+                        </button>
+                        <button
+                            onClick={() => handleExportAll("doc")}
+                            disabled={exporting}
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-50 text-slate-700 rounded-2xl font-bold hover:bg-gray-100 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                            {exporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <span className="text-rose-500"><FileText className="w-5 h-5" /></span>}
+                            Download as Word
                         </button>
                     </div>
                 </div>

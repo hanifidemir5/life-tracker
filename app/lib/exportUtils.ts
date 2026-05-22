@@ -32,6 +32,57 @@ function escapeCsvField(field: string): string {
     return field;
 }
 
+// Escape HTML characters for Word export
+function escapeHtml(text: string): string {
+    return text.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+               .replace(/"/g, "&quot;")
+               .replace(/'/g, "&#039;");
+}
+
+// Convert items to DOC (HTML format readable by Word)
+export function itemsToWord(items: Item[], categoryName: string): string {
+    const htmlContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>${categoryName} Export</title></head>
+        <body>
+            <h1>${categoryName}</h1>
+            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Başlık</th>
+                        <th>Açıklama</th>
+                        <th>Kategori</th>
+                        <th>Durum</th>
+                        <th>Sahip</th>
+                        <th>Tarih</th>
+                        <th>Fotoğraflar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(item => `
+                        <tr>
+                            <td>${item.id}</td>
+                            <td>${escapeHtml(item.title)}</td>
+                            <td>${escapeHtml(item.description || "")}</td>
+                            <td>${escapeHtml(categoryName)}</td>
+                            <td>${item.status ? "Tamamlandı" : "Bekliyor"}</td>
+                            <td>${escapeHtml(item.owner || "")}</td>
+                            <td>${item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}</td>
+                            <td>${item.image_urls ? item.image_urls.join("; ") : ""}</td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+    return htmlContent;
+}
+
+
 // Convert items to JSON format
 export function itemsToJSON(items: Item[], categoryName: string): string {
     const exportData = {
@@ -102,11 +153,62 @@ export function allDataToJSON(categories: Category[], itemsByCategory: Record<st
     return JSON.stringify(exportData, null, 2);
 }
 
+// Export all data to Word (HTML format readable by Word)
+export function allDataToWord(categories: Category[], itemsByCategory: Record<string, Item[]>): string {
+    const allRows: string[] = [];
+
+    categories.forEach(category => {
+        const categoryItems = itemsByCategory[category.key] || [];
+        categoryItems.forEach(item => {
+            allRows.push(`
+                <tr>
+                    <td>${item.id}</td>
+                    <td>${escapeHtml(item.title)}</td>
+                    <td>${escapeHtml(item.description || "")}</td>
+                    <td>${escapeHtml(category.name)}</td>
+                    <td>${item.status ? "Tamamlandı" : "Bekliyor"}</td>
+                    <td>${escapeHtml(item.owner || "")}</td>
+                    <td>${item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}</td>
+                    <td>${item.image_urls ? item.image_urls.join("; ") : ""}</td>
+                </tr>
+            `);
+        });
+    });
+
+    const htmlContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>Tüm Veriler Export</title></head>
+        <body>
+            <h1>Tüm Veriler</h1>
+            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Başlık</th>
+                        <th>Açıklama</th>
+                        <th>Kategori</th>
+                        <th>Durum</th>
+                        <th>Sahip</th>
+                        <th>Tarih</th>
+                        <th>Fotoğraflar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${allRows.join("")}
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+    return htmlContent;
+}
+
 // Trigger file download in browser
-export function downloadFile(content: string, filename: string, type: "csv" | "json"): void {
+export function downloadFile(content: string, filename: string, type: "csv" | "json" | "doc"): void {
     const mimeTypes = {
         csv: "text/csv;charset=utf-8;",
-        json: "application/json;charset=utf-8;"
+        json: "application/json;charset=utf-8;",
+        doc: "application/msword;charset=utf-8;"
     };
 
     const blob = new Blob([content], { type: mimeTypes[type] });
@@ -123,7 +225,7 @@ export function downloadFile(content: string, filename: string, type: "csv" | "j
 }
 
 // Generate filename with date
-export function getExportFilename(baseName: string, type: "csv" | "json"): string {
+export function getExportFilename(baseName: string, type: "csv" | "json" | "doc"): string {
     const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    return `heartsync_${baseName}_${date}.${type}`;
+    return \`heartsync_\${baseName}_\${date}.\${type}\`;
 }

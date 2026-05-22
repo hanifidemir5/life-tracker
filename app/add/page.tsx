@@ -275,7 +275,7 @@ export default function AddItemPage() {
                   setValue("owner", undefined); // Clear owner if not required
                 }
               }}
-              disabled={!!preSelectedCategory}
+              // Removed disabled={!!preSelectedCategory} to fix React Hook Form validation issue
             >
               {!preSelectedCategory && (
                 <option value="">{categoriesLoading ? 'Yükleniyor...' : t('selectCategoryDropdown') || 'Kategori Seçin...'}</option>
@@ -380,18 +380,18 @@ export default function AddItemPage() {
                 {t('description')}
               </label>
               <JoditEditor
-                value={watch("description") || ""}
-                config={{
-                  readonly: false,
-                  placeholder: t('descriptionPlaceholder') || "Enter description...",
-                  height: 300,
-                  toolbarAdaptive: false,
-                  askBeforePasteHTML: false,
-                  askBeforePasteFromWord: false,
-                  defaultActionOnPaste: "insert_as_html",
-                }}
-                onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
-              />
+              value={""}
+              config={{
+                readonly: false,
+                placeholder: t('descriptionPlaceholder') || "Enter description...",
+                height: 300,
+                toolbarAdaptive: false,
+                askBeforePasteHTML: false,
+                askBeforePasteFromWord: false,
+                defaultActionOnPaste: "insert_as_html",
+              }}
+              onChange={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+            />
               {errors.description && (
                 <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>
               )}

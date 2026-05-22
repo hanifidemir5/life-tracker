@@ -33,7 +33,7 @@ import { useLanguage } from "@/app/contexts/LanguageContext";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import { useItems, useInvalidateItems, useAllItems, Item, ITEMS_PER_PAGE } from "@/app/hooks/useItems";
 import { useCategories, useCategoryByKey, Category } from "@/app/hooks/useCategories";
-import { itemsToCSV, itemsToJSON, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
+import { itemsToCSV, itemsToJSON, itemsToWord, downloadFile, getExportFilename } from "@/app/lib/exportUtils";
 import ConfirmModal from "@/app/components/ConfirmModal";
 import BulkImportModal from "@/app/components/BulkImportModal";
 import CalendarSidebar from "@/app/components/TodoSection";
@@ -320,6 +320,18 @@ export default function CategoryPage() {
     setIsExportDropdownOpen(false);
   };
 
+  const handleExportWord = () => {
+    if (allItemsForExport.length === 0) {
+      toast.warn(t('listEmpty'));
+      return;
+    }
+    const docContent = itemsToWord(allItemsForExport, categoryData?.name || currentCategoryKey);
+    const filename = getExportFilename(currentCategoryKey, "doc");
+    downloadFile(docContent, filename, "doc");
+    toast.success(t('exportSuccess'));
+    setIsExportDropdownOpen(false);
+  };
+
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= (paginatedData?.totalPages || 1)) {
@@ -590,10 +602,17 @@ export default function CategoryPage() {
                     </button>
                     <button
                       onClick={handleExportJSON}
-                      className="w-full px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2 text-gray-700 text-sm"
+                      className="w-full px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2 text-gray-700 border-b border-gray-100 text-sm"
                     >
                       <span className="text-base">📄</span>
                       <span>JSON</span>
+                    </button>
+                    <button
+                      onClick={handleExportWord}
+                      className="w-full px-4 py-2.5 hover:bg-gray-50 flex items-center gap-2 text-gray-700 text-sm"
+                    >
+                      <span className="text-base">📝</span>
+                      <span>Word (.doc)</span>
                     </button>
                   </div>
                 )}
