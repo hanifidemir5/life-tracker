@@ -385,7 +385,7 @@ export default function AddItemPage() {
                 readonly: false,
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
                 height: 250,
-                allowResizeY: false,
+                allowResizeY: true,
                 allowResizeX: false,
                 toolbarAdaptive: false,
                 askBeforePasteHTML: false,
