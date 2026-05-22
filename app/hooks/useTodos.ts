@@ -18,9 +18,13 @@ export const toISO = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export function isTodoDueOn(todo: Pick<Todo, "period" | "due_date">, targetIso: string): boolean {
-    if (!todo.due_date || todo.due_date.length !== 10 || !targetIso || targetIso.length !== 10) return false;
+    if (!todo.due_date || !targetIso || targetIso.length !== 10) return false;
     
-    const [tY, tM, tD] = todo.due_date.split("-").map(Number);
+    // In case Supabase returns a timestamp like "2026-05-22T00:00:00Z", extract just the date part.
+    const dueDateStr = todo.due_date.substring(0, 10);
+    if (dueDateStr.length !== 10) return false;
+    
+    const [tY, tM, tD] = dueDateStr.split("-").map(Number);
     const [tarY, tarM, tarD] = targetIso.split("-").map(Number);
 
     const tDate = new Date(tY, tM - 1, tD);
@@ -31,7 +35,7 @@ export function isTodoDueOn(todo: Pick<Todo, "period" | "due_date">, targetIso: 
     
     switch (todo.period) {
         case "one-time":
-            return todo.due_date === targetIso;
+            return dueDateStr === targetIso;
         case "daily":
             return true;
         case "monthly":

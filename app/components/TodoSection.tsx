@@ -74,8 +74,13 @@ export default function CalendarSidebar({ userId, className = "" }: CalendarSide
 
     const handleAdd = async () => {
         if (!inputText.trim() || !userId || !canAdd) return;
-        await addTodo.mutateAsync({ userId, text: inputText.trim(), period: createPeriod, dueDate: selectedISO });
-        setInputText("");
+        try {
+            await addTodo.mutateAsync({ userId, text: inputText.trim(), period: createPeriod, dueDate: selectedISO });
+            setInputText("");
+        } catch (err: any) {
+            console.error(err);
+            alert("Error adding task: " + (err.message || err));
+        }
     };
 
     const myDueTodos = dueTodos.filter((t) => t.user_id === userId);
@@ -227,6 +232,7 @@ export default function CalendarSidebar({ userId, className = "" }: CalendarSide
                             {PERIOD_KEYS.map((p) => (
                                 <button
                                     key={p}
+                                    type="button"
                                     onClick={() => setCreatePeriod(p)}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-all ${createPeriod === p ? "bg-white text-gray-800 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
                                 >
