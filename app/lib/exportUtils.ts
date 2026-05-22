@@ -54,7 +54,7 @@ export function itemsToWord(items: Item[], categoryName: string): string {
             .meta-info { font-size: 12px; color: #718096; margin-bottom: 16px; font-style: italic; }
             .status-badge { display: inline-block; padding: 4px 8px; background-color: #fef3c7; color: #d97706; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
             .status-badge.completed { background-color: #d1fae5; color: #059669; }
-            .content { line-height: 1.6; color: #2d3748; margin-top: 15px; }
+            .content { line-height: 1.6; color: #2d3748; margin-top: 15px; white-space: pre-wrap; tab-size: 4; }
             .content p { margin-bottom: 1em; }
             hr.divider { border: 0; border-top: 1px dashed #cbd5e0; margin: 30px 0; }
         </style>
@@ -74,7 +74,7 @@ export function itemsToWord(items: Item[], categoryName: string): string {
                             Tarih: ${dateStr} | Kategori: ${escapeHtml(categoryName)} | Sahip: ${escapeHtml(item.owner || "")}
                         </div>
                         <div class="content">
-                            ${item.description || ""}
+                            ${(item.description || "").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")}
                         </div>
                         <hr class="divider" />
                     </div>
@@ -178,7 +178,7 @@ export function allDataToWord(categories: Category[], itemsByCategory: Record<st
                             Tarih: ${dateStr} | Sahip: ${escapeHtml(item.owner || "")}
                         </div>
                         <div class="content">
-                            ${item.description || ""}
+                            ${(item.description || "").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")}
                         </div>
                         <hr class="divider" />
                     </div>
@@ -199,7 +199,7 @@ export function allDataToWord(categories: Category[], itemsByCategory: Record<st
             .meta-info { font-size: 12px; color: #718096; margin-bottom: 16px; font-style: italic; }
             .status-badge { display: inline-block; padding: 4px 8px; background-color: #fef3c7; color: #d97706; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
             .status-badge.completed { background-color: #d1fae5; color: #059669; }
-            .content { line-height: 1.6; color: #2d3748; margin-top: 15px; }
+            .content { line-height: 1.6; color: #2d3748; margin-top: 15px; white-space: pre-wrap; tab-size: 4; }
             .content p { margin-bottom: 1em; }
             hr.divider { border: 0; border-top: 1px dashed #cbd5e0; margin: 30px 0; }
         </style>

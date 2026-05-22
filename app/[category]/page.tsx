@@ -78,6 +78,7 @@ export default function CategoryPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -370,6 +371,37 @@ export default function CategoryPage() {
     setBulkDeleteModalOpen(true);
   };
 
+  const handleBulkComplete = async () => {
+    if (selectedItems.size === 0) return;
+    setIsCompleting(true);
+    const idsToComplete = Array.from(selectedItems);
+
+    try {
+      const { error } = await supabase
+        .from("items")
+        .update({ status: true })
+        .in("id", idsToComplete);
+
+      if (error) throw error;
+
+      toast.success((t as any)('bulkCompleteSuccess') || `${selectedItems.size} items marked as completed!`);
+      
+      setLocalItems(prev => prev.map(item => 
+        selectedItems.has(item.id) ? { ...item, status: true } : item
+      ));
+
+      setSelectedItems(new Set());
+      setIsSelectionMode(false);
+      invalidateItems(currentCategoryKey);
+    } catch (error) {
+      console.error("Bulk complete error:", error);
+      toast.error(t('updateError') || "Error updating items.");
+      invalidateItems(currentCategoryKey);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const confirmBulkDelete = async () => {
     setIsDeleting(true);
     setBulkDeleteModalOpen(false);
@@ -643,6 +675,14 @@ export default function CategoryPage() {
               >
                 {isMoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
                 {t('move') || 'Move'} ({selectedItems.size})
+              </button>
+              <button
+                onClick={handleBulkComplete}
+                disabled={selectedItems.size === 0 || isCompleting}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+              >
+                {isCompleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                {(t as any)('complete') || 'Complete'} ({selectedItems.size})
               </button>
               <button
                 onClick={handleBulkDelete}
