@@ -661,6 +661,15 @@ export default function CategoryPage() {
 
         {/* LİSTE */}
         <div className="grid grid-cols-1 gap-4 z-0">
+          {/* ADD NEW ITEM PLACEHOLDER */}
+          <button
+            onClick={() => router.push(`/add?category=${currentCategoryKey}`)}
+            className={`bg-white/50 border-2 border-dashed border-gray-300 rounded-4xl p-4 sm:p-6 flex items-center justify-center gap-3 hover:bg-white hover:border-rose-300 hover:shadow-md hover:text-rose-500 transition-all duration-300 cursor-pointer group text-gray-400 font-medium w-full`}
+          >
+            <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            <span>{t('addItem') || 'Add Item'}</span>
+          </button>
+
           {localItems.map((item) => {
             const isExpanded = expandedItemId === item.id;
             const validImages = item.image_urls?.filter(url => url && typeof url === 'string' && url.trim() !== "") || [];

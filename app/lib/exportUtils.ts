@@ -227,5 +227,5 @@ export function downloadFile(content: string, filename: string, type: "csv" | "j
 // Generate filename with date
 export function getExportFilename(baseName: string, type: "csv" | "json" | "doc"): string {
     const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    return \`heartsync_\${baseName}_\${date}.\${type}\`;
+    return `heartsync_${baseName}_${date}.${type}`;
 }

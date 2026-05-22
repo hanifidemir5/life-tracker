@@ -82,6 +82,19 @@ export default function Home() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 px-2">
 
+            {/* ADD NEW CARD */}
+            <button
+              onClick={() => router.push("/add-category")}
+              className="aspect-4/5 flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 bg-white/50 hover:bg-white hover:border-rose-300 hover:shadow-lg transition-all duration-300 transform rotate-1 hover:rotate-0 group"
+            >
+              <div className="w-12 h-12 text-gray-300 group-hover:text-rose-400 transition-colors mb-2">
+                <Plus className="w-full h-full" />
+              </div>
+              <span className="text-sm font-medium text-gray-400 group-hover:text-rose-500 text-center">
+                {t('addNewCollection')}
+              </span>
+            </button>
+
             {/* CATEGORY CARDS - POLAROID STYLE */}
             {categories.map((cat: Category, index: number) => {
               const rotationClass = index % 2 === 0 ? "rotate-1 hover:rotate-0" : "-rotate-2 hover:rotate-0";
@@ -132,18 +145,7 @@ export default function Home() {
               );
             })}
 
-            {/* ADD NEW CARD */}
-            <button
-              onClick={() => router.push("/add-category")}
-              className="aspect-4/5 flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 bg-white/50 hover:bg-white hover:border-rose-300 hover:shadow-lg transition-all duration-300 transform rotate-1 hover:rotate-0 group"
-            >
-              <div className="w-12 h-12 text-gray-300 group-hover:text-rose-400 transition-colors mb-2">
-                <Plus className="w-full h-full" />
-              </div>
-              <span className="text-sm font-medium text-gray-400 group-hover:text-rose-500">
-                {t('addNewCollection')}
-              </span>
-            </button>
+
 
           </div>
         </div>
