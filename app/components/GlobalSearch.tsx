@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/app/lib/supebaseClient";
 import { Search, X, Loader2, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { getIconComponent, colorOptions } from "@/app/lib/iconMap";
 
@@ -27,6 +28,7 @@ type Category = {
 
 export default function GlobalSearch() {
     const { t } = useLanguage();
+    const router = useRouter();
     const [query, setQuery] = useState("");
     const [searchCategory, setSearchCategory] = useState("all");
     const [results, setResults] = useState<SearchResult[]>([]);
@@ -130,6 +132,13 @@ export default function GlobalSearch() {
         setResults([]);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" && query.trim().length >= 2) {
+            setIsFocused(false);
+            router.push(`/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(searchCategory)}`);
+        }
+    };
+
     return (
         <div ref={containerRef} className="relative flex-1 max-w-xl">
             {/* Always visible search input */}
@@ -142,6 +151,7 @@ export default function GlobalSearch() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setIsFocused(true)}
+                    onKeyDown={handleKeyDown}
                     placeholder={t('searchPlaceholder') || 'Search collections...'}
                     className="w-full bg-transparent py-2 pl-9 pr-2 text-sm focus:outline-none text-gray-800"
                 />
@@ -179,7 +189,7 @@ export default function GlobalSearch() {
                         results.map((item) => (
                             <Link
                                 key={item.id}
-                                href={`/detail/${item.id}`}
+                                href={`/search?q=${encodeURIComponent(item.title)}&category=all`}
                                 onClick={handleResultClick}
                                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
                             >

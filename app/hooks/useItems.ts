@@ -57,6 +57,50 @@ export function useItems(categoryKey: string, page: number = 1) {
     });
 }
 
+// Fetch paginated items for search query
+export function useSearchItems(searchQuery: string, categoryFilter: string, page: number = 1) {
+    return useQuery({
+        queryKey: ["searchItems", searchQuery, categoryFilter, page],
+        queryFn: async (): Promise<PaginatedItems> => {
+            const from = (page - 1) * ITEMS_PER_PAGE;
+            const to = from + ITEMS_PER_PAGE - 1;
+
+            let queryBuilder = supabase
+                .from("items")
+                .select("*", { count: "exact" })
+                .order("created_at", { ascending: false });
+                
+            if (categoryFilter && categoryFilter !== "all") {
+                queryBuilder = queryBuilder.eq("category", categoryFilter);
+            }
+            
+            // Note: Supabase's ilike is case-insensitive but might not handle Turkish chars perfectly.
+            // For a robust search, we could fetch more and filter in memory, but for pagination we must filter in DB.
+            if (searchQuery) {
+                queryBuilder = queryBuilder.ilike("title", `%${searchQuery}%`);
+            }
+            
+            const { data, error, count } = await queryBuilder.range(from, to);
+
+            if (error) throw error;
+
+            const totalCount = count || 0;
+            const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+            return {
+                items: data || [],
+                totalCount,
+                totalPages,
+                currentPage: page,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1,
+            };
+        },
+        enabled: !!searchQuery,
+        placeholderData: (previousData) => previousData,
+    });
+}
+
 // Fetch all items for a category (no pagination - for dropdown, etc.)
 export function useAllItems(categoryKey: string) {
     return useQuery({
