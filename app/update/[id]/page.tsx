@@ -319,8 +319,8 @@ export default function UpdateItemPage() {
   }
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center p-4 flex-1">
-      <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 relative">
+    <main className="min-h-screen w-full flex justify-center p-4 flex-1">
+      <div className="bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 relative my-auto">
         {/* CUSTOM DELETE MODAL */}
         {showDeleteModal && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 rounded-2xl animate-in fade-in zoom-in-95 p-6">
@@ -531,7 +531,9 @@ export default function UpdateItemPage() {
               config={{
                 readonly: false,
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
-                height: 300,
+                height: 250,
+                allowResizeY: false,
+                allowResizeX: false,
                 toolbarAdaptive: false,
                 askBeforePasteHTML: false,
                 askBeforePasteFromWord: false,

@@ -241,8 +241,8 @@ export default function AddItemPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
-      <div className={`bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-2xl border-2 ${colors.borderLight} relative overflow-hidden`}>
+    <main className="min-h-screen flex justify-center p-4">
+      <div className={`bg-white w-full max-w-md md:max-w-2xl p-6 md:p-8 rounded-2xl shadow-2xl border-2 ${colors.borderLight} relative overflow-hidden my-auto`}>
         {/* --- HEADER --- */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">{t('addItem')}</h1>
@@ -384,7 +384,9 @@ export default function AddItemPage() {
               config={{
                 readonly: false,
                 placeholder: t('descriptionPlaceholder') || "Enter description...",
-                height: 300,
+                height: 250,
+                allowResizeY: false,
+                allowResizeX: false,
                 toolbarAdaptive: false,
                 askBeforePasteHTML: false,
                 askBeforePasteFromWord: false,
