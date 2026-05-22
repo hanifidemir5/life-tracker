@@ -187,7 +187,7 @@ export default function CalendarSidebar({ userId, className = "" }: CalendarSide
                                         <div className={`absolute left-0 top-0 bottom-0 w-1 ${todo.period === 'one-time' ? 'bg-gray-400' : todo.period === 'daily' ? 'bg-rose-400' : todo.period === 'monthly' ? 'bg-blue-400' : 'bg-amber-400'}`} />
 
                                         <div className="flex-1 min-w-0 pl-2">
-                                            <h5 className={`text-base font-bold truncate leading-tight mb-1 flex items-center gap-1 ${todo.done ? "line-through text-gray-400" : "text-gray-800"}`}>
+                                            <h5 className={`text-base font-bold truncate leading-tight mb-1 flex items-center gap-1 ${todo.done ? "text-gray-800" : "text-gray-400"}`}>
                                                 {todo.text} 
                                                 <span className={`text-[10px] ml-1 px-1.5 py-0.5 rounded-full ${todo.done ? "bg-gray-100 text-gray-400" : "bg-rose-50 text-rose-400"}`}>{profiles[todo.user_id] || t('me') || "Me"}</span>
                                             </h5>
@@ -296,7 +296,7 @@ function DueRow({ todo, isOwn, onToggle, onDelete, periodBadge }: {
             <span className={`shrink-0 text-[9px] font-bold uppercase tracking-wider border rounded px-1 py-0.5 ${periodBadge[todo.period]}`}>
                 {todo.period.charAt(0).toUpperCase()}
             </span>
-            <span className={`flex-1 text-sm leading-tight ${todo.done ? "line-through text-gray-300" : isOwn ? "text-gray-600" : "text-purple-400 italic"}`}>
+            <span className={`flex-1 text-sm leading-tight ${todo.done ? (isOwn ? "text-gray-600" : "text-purple-400 italic") : "text-gray-300"}`}>
                 {todo.text}
             </span>
             {isOwn && (

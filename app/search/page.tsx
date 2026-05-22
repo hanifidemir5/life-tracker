@@ -746,7 +746,7 @@ export default function SearchPage() {
                       </div>
                       
                       <div className="flex items-start justify-between gap-4">
-                        <h2 className="text-xl sm:text-3xl font-black text-slate-800 tracking-tight mb-2 break-words whitespace-normal">{item.title}</h2>
+                        <h2 className={`text-xl sm:text-3xl font-black tracking-tight mb-2 break-words whitespace-normal ${item.status ? "text-slate-800" : "text-slate-500"}`}>{item.title}</h2>
                         {/* More Options / Edit Button Desktop */}
                         <div className="flex items-center gap-1 shrink-0 -mt-1">
                           <Link
@@ -815,11 +815,11 @@ export default function SearchPage() {
 
                     {/* Middle: Text */}
                     <div className="flex-1 min-w-0 pr-2">
-                      <h3 className={`text-base sm:text-lg font-bold truncate leading-tight tracking-tight ${item.status ? "text-slate-500 line-through decoration-slate-400" : "text-slate-800"}`}>
+                      <h3 className={`text-base sm:text-lg font-bold truncate leading-tight tracking-tight ${item.status ? "text-slate-800" : "text-slate-500"}`}>
                         {item.title}
                       </h3>
                       <p className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate mt-1 tracking-wide">
-                        {item.owner ? item.owner : (categoryData?.name || "Item")} &bull; {item.created_at ? new Date(item.created_at).getFullYear() : ""}
+                        {item.owner ? item.owner : (categoryData?.name || "Item")} &bull; {item.created_at ? new Date(item.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : ""}
                       </p>
                     </div>
 

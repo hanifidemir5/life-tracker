@@ -210,7 +210,7 @@ export default function GlobalSearch() {
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                    <p className={`font-semibold truncate ${item.status ? "text-gray-400 line-through" : "text-gray-800"}`}>
+                                    <p className={`font-semibold truncate ${item.status ? "text-gray-800" : "text-gray-400"}`}>
                                         {item.title}
                                     </p>
                                 </div>
