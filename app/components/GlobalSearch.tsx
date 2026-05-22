@@ -30,7 +30,7 @@ export default function GlobalSearch() {
     const { t } = useLanguage();
     const router = useRouter();
     const [query, setQuery] = useState("");
-    const [searchCategory, setSearchCategory] = useState("all");
+    const [searchCategory, setSearchCategory] = useState("");
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [categories, setCategories] = useState<Record<string, Category>>({});
@@ -74,7 +74,7 @@ export default function GlobalSearch() {
                 .order("created_at", { ascending: false })
                 .limit(500);
 
-            if (searchCategory !== "all") {
+            if (searchCategory && searchCategory !== "all") {
                 queryBuilder = queryBuilder.eq("category", searchCategory);
             }
 
@@ -82,10 +82,19 @@ export default function GlobalSearch() {
 
             if (!error && data) {
                 const lowerQuery = query.toLocaleLowerCase('tr-TR');
+                
+                const normalize = (text: string) => text.toLocaleLowerCase('tr-TR')
+                    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+                    .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c');
+                    
+                const normalizedQuery = normalize(query);
 
-                const filtered = data.filter((item: SearchResult) =>
-                    item.title?.toLocaleLowerCase('tr-TR').includes(lowerQuery)
-                ).slice(0, 10);
+                const filtered = data.filter((item: SearchResult) => {
+                    if (!item.title) return false;
+                    const titleTr = item.title.toLocaleLowerCase('tr-TR');
+                    const normalizedTitle = normalize(item.title);
+                    return titleTr.includes(lowerQuery) || normalizedTitle.includes(normalizedQuery);
+                }).slice(0, 10);
 
                 const enrichedResults = filtered.map((item: SearchResult) => ({
                     ...item,
@@ -133,7 +142,7 @@ export default function GlobalSearch() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter" && query.trim().length >= 2) {
+        if (e.key === "Enter" && query.trim().length >= 2 && searchCategory !== "") {
             setIsFocused(false);
             router.push(`/search?q=${encodeURIComponent(query)}&category=${encodeURIComponent(searchCategory)}`);
         }
@@ -143,43 +152,46 @@ export default function GlobalSearch() {
         <div ref={containerRef} className="relative flex-1 max-w-xl">
             {/* Always visible search input */}
             <div className="relative flex items-center w-full bg-rose-600/5 rounded-full border border-rose-600/10 focus-within:ring-2 focus-within:ring-rose-600/20 transition-all overflow-hidden">
-                <Search className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
-                
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onFocus={() => setIsFocused(true)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={t('searchPlaceholder') || 'Search collections...'}
-                    className="w-full bg-transparent py-2 pl-9 pr-2 text-sm focus:outline-none text-gray-800"
-                />
-
-                <div className="flex items-center pr-1 border-l border-rose-600/10">
+                <div className="flex items-center pl-2 pr-1 border-r border-rose-600/10 bg-rose-600/5 relative">
                     <select
                         value={searchCategory}
                         onChange={(e) => {
                             setSearchCategory(e.target.value);
                             inputRef.current?.focus();
                         }}
-                        className="bg-transparent text-xs text-gray-600 py-2 pl-2 pr-6 outline-none cursor-pointer appearance-none relative"
+                        className="bg-transparent text-xs text-gray-700 py-2.5 pl-2 pr-6 outline-none cursor-pointer appearance-none relative font-medium z-10"
                     >
+                        <option value="" disabled>{t('selectCategoryDropdown') || 'Select Category'}</option>
                         <option value="all">{t('all') || 'All'}</option>
                         {categoryList.map(cat => (
                             <option key={cat.key} value={cat.key}>{cat.name}</option>
                         ))}
                     </select>
-                    <ChevronDown className="w-3 h-3 text-gray-400 absolute right-3 pointer-events-none" />
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2 pointer-events-none" />
                 </div>
+                
+                <div className="relative flex-1 flex items-center">
+                    <Search className={`absolute left-3 w-4 h-4 transition-colors ${searchCategory === "" ? "text-gray-300" : "text-slate-400"} pointer-events-none`} />
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onFocus={() => setIsFocused(true)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={searchCategory === "" ? (t('selectCategoryFirst') || 'Select a category to search...') : (t('searchPlaceholder') || 'Search collections...')}
+                        disabled={searchCategory === ""}
+                        className="w-full bg-transparent py-2.5 pl-9 pr-10 text-sm focus:outline-none text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
 
-                {isLoading ? (
-                    <Loader2 className="absolute right-28 w-4 h-4 text-rose-500 animate-spin" />
-                ) : query ? (
-                    <button onClick={handleClear} className="absolute right-28 text-gray-400 hover:text-gray-600">
-                        <X className="w-4 h-4" />
-                    </button>
-                ) : null}
+                    {isLoading ? (
+                        <Loader2 className="absolute right-3 w-4 h-4 text-rose-500 animate-spin" />
+                    ) : query ? (
+                        <button onClick={handleClear} className="absolute right-3 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    ) : null}
+                </div>
             </div>
 
             {/* Results Dropdown */}

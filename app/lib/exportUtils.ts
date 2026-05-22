@@ -45,37 +45,41 @@ function escapeHtml(text: string): string {
 export function itemsToWord(items: Item[], categoryName: string): string {
     const htmlContent = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'><title>${categoryName} Export</title></head>
+        <head><meta charset='utf-8'><title>${categoryName} Export</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+            h1 { color: #2c3e50; font-size: 32px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 30px; }
+            .item { margin-bottom: 40px; page-break-inside: avoid; }
+            .item-title { font-size: 24px; font-weight: bold; color: #1a202c; margin-bottom: 8px; }
+            .meta-info { font-size: 12px; color: #718096; margin-bottom: 16px; font-style: italic; }
+            .status-badge { display: inline-block; padding: 4px 8px; background-color: #fef3c7; color: #d97706; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
+            .status-badge.completed { background-color: #d1fae5; color: #059669; }
+            .content { line-height: 1.6; color: #2d3748; margin-top: 15px; }
+            .content p { margin-bottom: 1em; }
+            hr.divider { border: 0; border-top: 1px dashed #cbd5e0; margin: 30px 0; }
+        </style>
+        </head>
         <body>
             <h1>${categoryName}</h1>
-            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Başlık</th>
-                        <th>Açıklama</th>
-                        <th>Kategori</th>
-                        <th>Durum</th>
-                        <th>Sahip</th>
-                        <th>Tarih</th>
-                        <th>Fotoğraflar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${items.map(item => `
-                        <tr>
-                            <td>${item.id}</td>
-                            <td>${escapeHtml(item.title)}</td>
-                            <td>${escapeHtml(item.description || "")}</td>
-                            <td>${escapeHtml(categoryName)}</td>
-                            <td>${item.status ? "Tamamlandı" : "Bekliyor"}</td>
-                            <td>${escapeHtml(item.owner || "")}</td>
-                            <td>${item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}</td>
-                            <td>${item.image_urls ? item.image_urls.join("; ") : ""}</td>
-                        </tr>
-                    `).join("")}
-                </tbody>
-            </table>
+            ${items.map(item => {
+                const statusStr = item.status ? "TAMAMLANDI" : "BEKLİYOR";
+                const statusClass = item.status ? "completed" : "";
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : "";
+                
+                return \`
+                    <div class="item">
+                        <span class="status-badge \${statusClass}">\${statusStr}</span>
+                        <div class="item-title">\${escapeHtml(item.title)}</div>
+                        <div class="meta-info">
+                            Tarih: \${dateStr} | Kategori: \${escapeHtml(categoryName)} | Sahip: \${escapeHtml(item.owner || "")}
+                        </div>
+                        <div class="content">
+                            \${item.description || ""}
+                        </div>
+                        <hr class="divider" />
+                    </div>
+                \`;
+            }).join("")}
         </body>
         </html>
     `;
@@ -159,44 +163,50 @@ export function allDataToWord(categories: Category[], itemsByCategory: Record<st
 
     categories.forEach(category => {
         const categoryItems = itemsByCategory[category.key] || [];
-        categoryItems.forEach(item => {
-            allRows.push(`
-                <tr>
-                    <td>${item.id}</td>
-                    <td>${escapeHtml(item.title)}</td>
-                    <td>${escapeHtml(item.description || "")}</td>
-                    <td>${escapeHtml(category.name)}</td>
-                    <td>${item.status ? "Tamamlandı" : "Bekliyor"}</td>
-                    <td>${escapeHtml(item.owner || "")}</td>
-                    <td>${item.created_at ? new Date(item.created_at).toLocaleDateString() : ""}</td>
-                    <td>${item.image_urls ? item.image_urls.join("; ") : ""}</td>
-                </tr>
-            `);
-        });
+        if (categoryItems.length > 0) {
+            allRows.push(`<h2>${escapeHtml(category.name)}</h2>`);
+            categoryItems.forEach(item => {
+                const statusStr = item.status ? "TAMAMLANDI" : "BEKLİYOR";
+                const statusClass = item.status ? "completed" : "";
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : "";
+                
+                allRows.push(`
+                    <div class="item">
+                        <span class="status-badge ${statusClass}">${statusStr}</span>
+                        <div class="item-title">${escapeHtml(item.title)}</div>
+                        <div class="meta-info">
+                            Tarih: ${dateStr} | Sahip: ${escapeHtml(item.owner || "")}
+                        </div>
+                        <div class="content">
+                            ${item.description || ""}
+                        </div>
+                        <hr class="divider" />
+                    </div>
+                `);
+            });
+        }
     });
 
     const htmlContent = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'><title>Tüm Veriler Export</title></head>
+        <head><meta charset='utf-8'><title>Tüm Veriler Export</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+            h1 { color: #2c3e50; font-size: 32px; text-align: center; margin-bottom: 40px; }
+            h2 { color: #34495e; font-size: 28px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 40px; margin-bottom: 20px; }
+            .item { margin-bottom: 40px; page-break-inside: avoid; }
+            .item-title { font-size: 24px; font-weight: bold; color: #1a202c; margin-bottom: 8px; }
+            .meta-info { font-size: 12px; color: #718096; margin-bottom: 16px; font-style: italic; }
+            .status-badge { display: inline-block; padding: 4px 8px; background-color: #fef3c7; color: #d97706; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
+            .status-badge.completed { background-color: #d1fae5; color: #059669; }
+            .content { line-height: 1.6; color: #2d3748; margin-top: 15px; }
+            .content p { margin-bottom: 1em; }
+            hr.divider { border: 0; border-top: 1px dashed #cbd5e0; margin: 30px 0; }
+        </style>
+        </head>
         <body>
             <h1>Tüm Veriler</h1>
-            <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Başlık</th>
-                        <th>Açıklama</th>
-                        <th>Kategori</th>
-                        <th>Durum</th>
-                        <th>Sahip</th>
-                        <th>Tarih</th>
-                        <th>Fotoğraflar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${allRows.join("")}
-                </tbody>
-            </table>
+            ${allRows.join("")}
         </body>
         </html>
     `;

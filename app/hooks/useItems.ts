@@ -63,32 +63,50 @@ export function useSearchItems(searchQuery: string, categoryFilter: string, page
         queryKey: ["searchItems", searchQuery, categoryFilter, page],
         queryFn: async (): Promise<PaginatedItems> => {
             const from = (page - 1) * ITEMS_PER_PAGE;
-            const to = from + ITEMS_PER_PAGE - 1;
 
             let queryBuilder = supabase
                 .from("items")
-                .select("*", { count: "exact" })
+                .select("*")
                 .order("created_at", { ascending: false });
                 
             if (categoryFilter && categoryFilter !== "all") {
                 queryBuilder = queryBuilder.eq("category", categoryFilter);
             }
             
-            // Note: Supabase's ilike is case-insensitive but might not handle Turkish chars perfectly.
-            // For a robust search, we could fetch more and filter in memory, but for pagination we must filter in DB.
-            if (searchQuery) {
-                queryBuilder = queryBuilder.ilike("title", `%${searchQuery}%`);
-            }
-            
-            const { data, error, count } = await queryBuilder.range(from, to);
+            // We fetch all matching the category (or all items) and filter in memory 
+            // to correctly support Turkish characters which Supabase ilike doesn't handle well.
+            const { data, error } = await queryBuilder;
 
             if (error) throw error;
 
-            const totalCount = count || 0;
+            let filteredData = data || [];
+
+            if (searchQuery) {
+                const lowerQuery = searchQuery.toLocaleLowerCase('tr-TR');
+                
+                // Helper to remove accents if user types english chars, but basically we do a robust match
+                const normalize = (text: string) => text.toLocaleLowerCase('tr-TR')
+                    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+                    .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c');
+
+                const normalizedQuery = normalize(searchQuery);
+
+                filteredData = filteredData.filter(item => {
+                    if (!item.title) return false;
+                    const titleTr = item.title.toLocaleLowerCase('tr-TR');
+                    const normalizedTitle = normalize(item.title);
+                    
+                    // Match either strict turkish lowercase or accent-folded version
+                    return titleTr.includes(lowerQuery) || normalizedTitle.includes(normalizedQuery);
+                });
+            }
+
+            const totalCount = filteredData.length;
             const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+            const paginatedData = filteredData.slice(from, from + ITEMS_PER_PAGE);
 
             return {
-                items: data || [],
+                items: paginatedData,
                 totalCount,
                 totalPages,
                 currentPage: page,
