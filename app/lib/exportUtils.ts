@@ -74,7 +74,7 @@ export function itemsToWord(items: Item[], categoryName: string): string {
                             Tarih: ${dateStr} | Kategori: ${escapeHtml(categoryName)} | Sahip: ${escapeHtml(item.owner || "")}
                         </div>
                         <div class="content">
-                            ${(item.description || "").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")}
+                            ${(item.description || "").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;").replace(/\n/g, "<br />")}
                         </div>
                         <hr class="divider" />
                     </div>
@@ -178,7 +178,7 @@ export function allDataToWord(categories: Category[], itemsByCategory: Record<st
                             Tarih: ${dateStr} | Sahip: ${escapeHtml(item.owner || "")}
                         </div>
                         <div class="content">
-                            ${(item.description || "").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;")}
+                            ${(item.description || "").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;").replace(/\n/g, "<br />")}
                         </div>
                         <hr class="divider" />
                     </div>
