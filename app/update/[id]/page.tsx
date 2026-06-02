@@ -66,7 +66,7 @@ export default function UpdateItemPage() {
       description: "",
       owner: "",
       status: false,
-    }
+    },
   });
 
   const currentCategoryKey = watch("category");
@@ -93,25 +93,25 @@ export default function UpdateItemPage() {
       // Durum: TRUE (Tamamlanmış)
       switch (category) {
         case "book":
-          return t('statusRead');
+          return t("statusRead");
         case "movie":
-          return t('statusWatched');
+          return t("statusWatched");
         case "lego":
-          return t('statusCompleted');
+          return t("statusCompleted");
         default:
-          return t('statusCompleted'); // General
+          return t("statusCompleted"); // General
       }
     } else {
       // Durum: FALSE (Bekliyor)
       switch (category) {
         case "book":
-          return t('statusToRead');
+          return t("statusToRead");
         case "movie":
-          return t('statusToWatch');
+          return t("statusToWatch");
         case "lego":
-          return t('statusToDo');
+          return t("statusToDo");
         default:
-          return t('statusPending'); // General
+          return t("statusPending"); // General
       }
     }
   };
@@ -125,17 +125,38 @@ export default function UpdateItemPage() {
         setCategories(catData || []);
 
         // 2. Profilleri Çek
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
-          const { data: myProfile } = await supabase.from("profiles").select("id, display_name").eq("id", user.id).maybeSingle();
+          const { data: myProfile } = await supabase
+            .from("profiles")
+            .select("id, display_name")
+            .eq("id", user.id)
+            .maybeSingle();
           const myName = myProfile?.display_name || "Me";
           const profileList = [{ id: user.id, name: myName }];
 
-          const { data: coupleData } = await supabase.from("couples").select("*").or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`).maybeSingle();
+          const { data: coupleData } = await supabase
+            .from("couples")
+            .select("*")
+            .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+            .maybeSingle();
           if (coupleData) {
-            const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id;
-            const { data: partnerProfile } = await supabase.from("profiles").select("id, display_name").eq("id", partnerId).maybeSingle();
-            if (partnerProfile) profileList.push({ id: partnerId, name: partnerProfile.display_name });
+            const partnerId =
+              coupleData.user1_id === user.id
+                ? coupleData.user2_id
+                : coupleData.user1_id;
+            const { data: partnerProfile } = await supabase
+              .from("profiles")
+              .select("id, display_name")
+              .eq("id", partnerId)
+              .maybeSingle();
+            if (partnerProfile)
+              profileList.push({
+                id: partnerId,
+                name: partnerProfile.display_name,
+              });
           }
           setProfiles(profileList);
         }
@@ -150,14 +171,27 @@ export default function UpdateItemPage() {
         if (error) throw error;
 
         if (itemData) {
+          const formatDescriptionForEditor = (desc: string) => {
+            if (!desc) return "";
+            if (/<[a-z][\s\S]*>/i.test(desc)) return desc;
+
+            // Plain text: split by newlines and wrap in <p> tags for proper paragraph spacing
+            return desc
+              .split("\n")
+              .map((line) => `<p>${line.trim() ? line : "<br>"}</p>`)
+              .join("");
+          };
+
           reset({
             title: itemData.title,
             category: itemData.category,
-            description: itemData.description || "",
+            description: formatDescriptionForEditor(itemData.description),
             owner: itemData.owner || "",
             status: itemData.status,
           });
-          setItemDate(itemData.created_at ? itemData.created_at.split('T')[0] : "");
+          setItemDate(
+            itemData.created_at ? itemData.created_at.split("T")[0] : "",
+          );
           setInitialDesc(itemData.description || "");
 
           // Load existing photos
@@ -167,7 +201,7 @@ export default function UpdateItemPage() {
         }
       } catch (error) {
         console.error(error);
-        toast.error(t('error'));
+        toast.error(t("error"));
         router.push("/");
       } finally {
         setLoading(false);
@@ -179,21 +213,25 @@ export default function UpdateItemPage() {
 
   const onSubmit = async (data: ItemFormData) => {
     // Kategorinin zorunluluk durumunu kontrol et
-    const currentCategoryObj = categories.find(c => c.key === data.category);
-    const isOwnerRequired = currentCategoryObj ? currentCategoryObj.is_owner_required : false;
+    const currentCategoryObj = categories.find((c) => c.key === data.category);
+    const isOwnerRequired = currentCategoryObj
+      ? currentCategoryObj.is_owner_required
+      : false;
 
     if (isOwnerRequired && !data.owner) {
-      toast.warn(t('pleaseSelectOwner'));
+      toast.warn(t("pleaseSelectOwner"));
       return;
     }
 
     setSaving(true);
     try {
       // Upload new photos if any
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       let uploadedUrls: string[] = [];
       if (newPhotos.length > 0 && user) {
-        toast.info(t('uploadingPhotos'));
+        toast.info(t("uploadingPhotos"));
         uploadedUrls = await uploadNewPhotos(user.id);
       }
 
@@ -219,14 +257,14 @@ export default function UpdateItemPage() {
       setNewPhotos([]);
       setNewPhotoPreviews([]);
 
-      toast.success(t('updateSuccess'));
+      toast.success(t("updateSuccess"));
 
       // Smart redirect: Go to the category page and highlight the updated item
-      const page = searchParams.get('page') || '1';
+      const page = searchParams.get("page") || "1";
       invalidateItems(data.category);
       router.push(`/${data.category}?page=${page}&highlightItem=${itemId}`);
     } catch (error) {
-      toast.error(t('updateFailed'));
+      toast.error(t("updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -237,11 +275,11 @@ export default function UpdateItemPage() {
     try {
       const { error } = await supabase.from("items").delete().eq("id", itemId);
       if (error) throw error;
-      toast.info(t('itemDeleted'));
+      toast.info(t("itemDeleted"));
       invalidateItems();
       router.back();
     } catch (error) {
-      toast.error(t('deletionFailed'));
+      toast.error(t("deletionFailed"));
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
@@ -257,24 +295,24 @@ export default function UpdateItemPage() {
 
     const remainingSlots = MAX_PHOTOS - totalPhotos;
     if (files.length > remainingSlots) {
-      toast.warn(t('photoLimit'));
+      toast.warn(t("photoLimit"));
       return;
     }
 
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setNewPhotos(prev => [...prev, ...files]);
-    setNewPhotoPreviews(prev => [...prev, ...newPreviews]);
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    setNewPhotos((prev) => [...prev, ...files]);
+    setNewPhotoPreviews((prev) => [...prev, ...newPreviews]);
     e.target.value = "";
   };
 
   const removeExistingPhoto = (index: number) => {
-    setExistingPhotos(prev => prev.filter((_, i) => i !== index));
+    setExistingPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeNewPhoto = (index: number) => {
     URL.revokeObjectURL(newPhotoPreviews[index]);
-    setNewPhotos(prev => prev.filter((_, i) => i !== index));
-    setNewPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+    setNewPhotos((prev) => prev.filter((_, i) => i !== index));
+    setNewPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const uploadNewPhotos = async (userId: string): Promise<string[]> => {
@@ -285,17 +323,17 @@ export default function UpdateItemPage() {
 
     try {
       for (const file of newPhotos) {
-        const fileExt = file.name.split('.').pop();
+        const fileExt = file.name.split(".").pop();
         const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('item-images')
+          .from("item-images")
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
         const { data: urlData } = supabase.storage
-          .from('item-images')
+          .from("item-images")
           .getPublicUrl(fileName);
 
         uploadedUrls.push(urlData.publicUrl);
@@ -307,8 +345,12 @@ export default function UpdateItemPage() {
     return uploadedUrls;
   };
 
-  const currentCategoryObj = categories.find(c => c.key === currentCategoryKey);
-  const isOwnerRequired = currentCategoryObj ? currentCategoryObj.is_owner_required : false;
+  const currentCategoryObj = categories.find(
+    (c) => c.key === currentCategoryKey,
+  );
+  const isOwnerRequired = currentCategoryObj
+    ? currentCategoryObj.is_owner_required
+    : false;
 
   if (loading) {
     return (
@@ -329,17 +371,17 @@ export default function UpdateItemPage() {
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {t('deleteItemConfirmTitle')}
+                {t("deleteItemConfirmTitle")}
               </h3>
               <p className="text-gray-500 mb-6 text-sm">
-                {t('deleteItemConfirmMessage')}
+                {t("deleteItemConfirmMessage")}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                 >
-                  {t('cancel')}
+                  {t("cancel")}
                 </button>
                 <button
                   onClick={handleDelete}
@@ -349,7 +391,7 @@ export default function UpdateItemPage() {
                   {deleting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    t('yesDelete')
+                    t("yesDelete")
                   )}
                 </button>
               </div>
@@ -362,45 +404,51 @@ export default function UpdateItemPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                const page = searchParams.get('page') || '1';
+                const page = searchParams.get("page") || "1";
                 router.push(`/${currentCategoryKey}?page=${page}`);
               }}
               className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
             >
               <ArrowLeft className="w-6 h-6" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">{t('edit')}</h1>
+            <h1 className="text-2xl font-bold text-gray-800">{t("edit")}</h1>
           </div>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
-            title={t('deleteItem')}
+            title={t("deleteItem")}
           >
             <Trash2 className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-black">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-6 text-black"
+        >
           {/* --- DURUM (STATUS) ALANI --- */}
           <div
             onClick={() =>
               setValue("status", !currentStatus, { shouldValidate: true })
             }
-            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${currentStatus
-              ? "bg-green-50 border-green-200"
-              : "bg-gray-50 border-gray-200 hover:border-blue-300"
-              }`}
+            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all group ${
+              currentStatus
+                ? "bg-green-50 border-green-200"
+                : "bg-gray-50 border-gray-200 hover:border-blue-300"
+            }`}
           >
             <div className="flex flex-col">
               <span
-                className={`font-semibold ${currentStatus ? "text-green-800" : "text-gray-700"
-                  }`}
+                className={`font-semibold ${
+                  currentStatus ? "text-green-800" : "text-gray-700"
+                }`}
               >
-                {t('status')}
+                {t("status")}
               </span>
               <span
-                className={`text-xs ${currentStatus ? "text-green-600" : "text-gray-500"
-                  }`}
+                className={`text-xs ${
+                  currentStatus ? "text-green-600" : "text-gray-500"
+                }`}
               >
                 {getStatusLabel(currentCategoryKey, currentStatus)}
               </span>
@@ -418,35 +466,44 @@ export default function UpdateItemPage() {
           {/* BAŞLIK */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('itemName')}
+              {t("itemName")}
             </label>
             <input
               type="text"
               className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none transition-all
-                    ${errors.title
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"}`}
+                    ${
+                      errors.title
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
               {...register("title")}
             />
-            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title.message}</p>}
+            {errors.title && (
+              <p className="mt-1 text-xs text-red-500">
+                {errors.title.message}
+              </p>
+            )}
           </div>
 
           {/* KATEGORİ */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('category')}
+              {t("category")}
             </label>
             <select
               className={`w-full px-4 py-2 border rounded-xl focus:ring-2 outline-none
-                    ${errors.category
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                  : "border-gray-300 focus:ring-blue-500 bg-white"}`}
+                    ${
+                      errors.category
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                        : "border-gray-300 focus:ring-blue-500 bg-white"
+                    }`}
               {...register("category")}
               onChange={(e) => {
                 register("category").onChange(e); // Propagate
                 const newCategory = e.target.value;
-                const newCatObj = categories.find(c => c.key === newCategory);
-                const shouldClearOwner = newCatObj && !newCatObj.is_owner_required;
+                const newCatObj = categories.find((c) => c.key === newCategory);
+                const shouldClearOwner =
+                  newCatObj && !newCatObj.is_owner_required;
                 if (shouldClearOwner) {
                   setValue("owner", "", { shouldValidate: true });
                 }
@@ -458,13 +515,17 @@ export default function UpdateItemPage() {
                 </option>
               ))}
             </select>
-            {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>}
+            {errors.category && (
+              <p className="mt-1 text-xs text-red-500">
+                {errors.category.message}
+              </p>
+            )}
           </div>
 
           {/* DATE PICKER */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('itemDate')}
+              {t("itemDate")}
             </label>
             <input
               type="date"
@@ -477,14 +538,16 @@ export default function UpdateItemPage() {
           {/* OWNER */}
           {isOwnerRequired && (
             <div
-              className={`p-4 rounded-xl border transition-colors ${!currentOwner
-                ? "bg-red-50 border-red-200"
-                : "bg-blue-50 border-blue-100"
-                }`}
+              className={`p-4 rounded-xl border transition-colors ${
+                !currentOwner
+                  ? "bg-red-50 border-red-200"
+                  : "bg-blue-50 border-blue-100"
+              }`}
             >
               <label
-                className={`block text-sm font-medium mb-2 ${!currentOwner ? "text-red-600" : "text-blue-800"
-                  }`}
+                className={`block text-sm font-medium mb-2 ${
+                  !currentOwner ? "text-red-600" : "text-blue-800"
+                }`}
               >
                 Who has it now?{" "}
                 <span className="text-xs font-normal opacity-70">
@@ -507,31 +570,37 @@ export default function UpdateItemPage() {
                       <div className="absolute w-2 h-2 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
                     </div>
                     <span
-                      className={`${currentOwner === profile.name
-                        ? "text-gray-900 font-medium"
-                        : "text-gray-600"
-                        } group-hover:text-gray-900`}
+                      className={`${
+                        currentOwner === profile.name
+                          ? "text-gray-900 font-medium"
+                          : "text-gray-600"
+                      } group-hover:text-gray-900`}
                     >
                       {profile.name}
                     </span>
                   </label>
                 ))}
               </div>
-              {errors.owner && <p className="mt-1 text-xs text-red-500">{errors.owner.message}</p>}
+              {errors.owner && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.owner.message}
+                </p>
+              )}
             </div>
           )}
 
           {/* NOTLAR */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('notes')}
+              {t("notes")}
             </label>
             <JoditEditor
               value={watch("description") || ""}
               config={{
                 readonly: false,
-                placeholder: t('descriptionPlaceholder') || "Enter description...",
-                height: 250,
+                placeholder:
+                  t("descriptionPlaceholder") || "Enter description...",
+                height: 750,
                 allowResizeY: true,
                 allowResizeX: false,
                 toolbarAdaptive: false,
@@ -539,23 +608,33 @@ export default function UpdateItemPage() {
                 askBeforePasteFromWord: false,
                 defaultActionOnPaste: "insert_as_html",
               }}
-              onBlur={(newContent) => setValue("description", newContent, { shouldValidate: true })}
+              onBlur={(newContent) =>
+                setValue("description", newContent, { shouldValidate: true })
+              }
               onChange={() => {}}
             />
             {errors.description && (
-              <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>
+              <p className="mt-1 text-xs text-red-500">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
           {/* PHOTO SECTION */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('uploadPhotos')} <span className="text-gray-400">({totalPhotos}/{MAX_PHOTOS})</span>
+              {t("uploadPhotos")}{" "}
+              <span className="text-gray-400">
+                ({totalPhotos}/{MAX_PHOTOS})
+              </span>
             </label>
             <div className="grid grid-cols-5 gap-3">
               {/* Existing Photos */}
               {existingPhotos.map((url, idx) => (
-                <div key={`existing-${idx}`} className="relative aspect-square group">
+                <div
+                  key={`existing-${idx}`}
+                  className="relative aspect-square group"
+                >
                   <img
                     src={url}
                     alt={`Photo ${idx + 1}`}
@@ -573,13 +652,18 @@ export default function UpdateItemPage() {
 
               {/* New Photos */}
               {newPhotoPreviews.map((preview, idx) => (
-                <div key={`new-${idx}`} className="relative aspect-square group">
+                <div
+                  key={`new-${idx}`}
+                  className="relative aspect-square group"
+                >
                   <img
                     src={preview}
                     alt={`New Photo ${idx + 1}`}
                     className="w-full h-full object-cover rounded-xl border-2 border-pink-300 shadow-sm"
                   />
-                  <div className="absolute top-1 left-1 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">NEW</div>
+                  <div className="absolute top-1 left-1 bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">
+                    NEW
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeNewPhoto(idx)}
@@ -594,7 +678,9 @@ export default function UpdateItemPage() {
               {totalPhotos < MAX_PHOTOS && (
                 <label className="aspect-square border-2 border-dashed border-blue-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors">
                   <ImagePlus className="w-6 h-6 text-blue-400" />
-                  <span className="text-xs text-blue-400 mt-1 font-medium">{t('addPhoto')}</span>
+                  <span className="text-xs text-blue-400 mt-1 font-medium">
+                    {t("addPhoto")}
+                  </span>
                   <input
                     type="file"
                     accept="image/*"
@@ -605,7 +691,7 @@ export default function UpdateItemPage() {
                 </label>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-2">{t('immortalize')}</p>
+            <p className="text-xs text-gray-400 mt-2">{t("immortalize")}</p>
           </div>
 
           {/* BUTONLAR */}
@@ -615,7 +701,7 @@ export default function UpdateItemPage() {
               onClick={() => router.back()}
               className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
             >
-              {t('cancel')}
+              {t("cancel")}
             </button>
             <button
               type="submit"
@@ -627,7 +713,7 @@ export default function UpdateItemPage() {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-              {saving ? t('saving') : t('update')}
+              {saving ? t("saving") : t("update")}
             </button>
           </div>
         </form>

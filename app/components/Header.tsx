@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Settings, User, Heart, LogOut, Loader2, Search, X, Menu } from "lucide-react";
+import { Settings, User, Heart, LogOut, Loader2, Search, X, Menu, CalendarClock } from "lucide-react";
 import { useLanguage } from "@/app/contexts/LanguageContext";
 import { logout } from "@/app/actions/auth";
 import GlobalSearch from "@/app/components/GlobalSearch";
